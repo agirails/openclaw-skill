@@ -59,7 +59,7 @@ const client = await ACTPClient.create({
 // Step 1: Create transaction
 const txId = await client.standard.createTransaction({
   provider: '0xProviderAddress',
-  amount: ethers.parseUnits('100', 6),  // 100 USDC (6 decimals)
+  amount: '100',  // 100 USDC (user-friendly)
   deadline: Math.floor(Date.now() / 1000) + 86400,  // 24h
   disputeWindow: 172800,  // 48h dispute window
   serviceDescription: 'Translate 500 words to Spanish',
@@ -67,7 +67,7 @@ const txId = await client.standard.createTransaction({
 console.log(`Created: ${txId}, State: INITIATED`);
 
 // Step 2: Lock escrow
-await client.standard.linkEscrow(txId);
+const escrowId = await client.standard.linkEscrow(txId);
 console.log(`Escrow locked, State: COMMITTED`);
 
 // Step 3: Wait for delivery... (provider works)
@@ -75,13 +75,15 @@ console.log(`Escrow locked, State: COMMITTED`);
 // Step 4: Check status
 const tx = await client.standard.getTransaction(txId);
 if (tx.state === 'DELIVERED') {
-  // Step 5a: All good - release funds
-  await client.standard.releaseEscrow(txId);
-  console.log(`Payment released, State: SETTLED`);
-} else if (tx.state === 'DELIVERED' && /* unsatisfied */) {
-  // Step 5b: Problem - raise dispute
-  await client.standard.transitionState(txId, 'DISPUTED');
-  console.log(`Dispute raised, State: DISPUTED`);
+  if (/* satisfied */ true) {
+    // Step 5a: All good - release funds
+    await client.standard.releaseEscrow(escrowId);
+    console.log(`Payment released, State: SETTLED`);
+  } else {
+    // Step 5b: Problem - raise dispute
+    await client.standard.transitionState(txId, 'DISPUTED');
+    console.log(`Dispute raised, State: DISPUTED`);
+  }
 }
 ```
 
@@ -89,9 +91,9 @@ if (tx.state === 'DELIVERED') {
 
 ---
 
-## 3. Advanced API (Low-level)
+## 3. Provider Flow (Standard API)
 
-For provider agents or custom integrations - direct protocol access.
+For provider agents or custom integrations.
 
 ```typescript
 import { ACTPClient } from '@agirails/sdk';
@@ -126,8 +128,7 @@ const disputeWindow = 172800;  // 48h
 const deliveryProof = abiCoder.encode(['uint256'], [disputeWindow]);
 await client.standard.transitionState(txId, 'DELIVERED', deliveryProof);
 
-// Step 6: Wait for dispute window or requester release
-// Funds auto-release after 48h
+// Step 6: Wait for requester to release after dispute window
 ```
 
 **Use when:** Building a provider agent that receives payments.
@@ -136,14 +137,14 @@ await client.standard.transitionState(txId, 'DELIVERED', deliveryProof);
 
 ## API Level Comparison
 
-| Aspect | Basic | Standard | Advanced |
-|--------|-------|----------|----------|
+| Aspect | Basic | Standard | Provider Flow |
+|--------|-------|----------|---------------|
 | **Lines of code** | 1 | 5-10 | 10-20 |
-| **Control** | Minimal | Full | Total |
+| **Control** | Minimal | Full | Full |
 | **State tracking** | No | Yes | Yes |
 | **Dispute handling** | No | Yes | Yes |
 | **Provider flow** | No | Partial | Yes |
-| **Proof encoding** | Automatic | Automatic | Manual |
+| **Proof encoding** | Automatic | Manual | Manual |
 
 ---
 
@@ -152,7 +153,7 @@ await client.standard.transitionState(txId, 'DELIVERED', deliveryProof);
 ```
 INITIATED ──► QUOTED ──► COMMITTED ──► IN_PROGRESS ──► DELIVERED ──► SETTLED
                               │              │              │
-                              └──────────────┴──────────────┴──► DISPUTED
+                                                             └──► DISPUTED
                               │
                               └──► CANCELLED
 ```
@@ -207,16 +208,16 @@ async def main():
     # Create and lock
     tx_id = await client.standard.create_transaction(
         provider="0xProviderAddress",
-        amount=100_000_000,  # 100 USDC (6 decimals)
+        amount="100",  # 100 USDC (user-friendly)
         deadline=int(time.time()) + 86400,
         dispute_window=172800,
     )
-    await client.standard.link_escrow(tx_id)
+    escrow_id = await client.standard.link_escrow(tx_id)
 
     # Check and release
     tx = await client.standard.get_transaction(tx_id)
     if tx.state == "DELIVERED":
-        await client.standard.release_escrow(tx_id)
+        await client.standard.release_escrow(escrow_id)
 
 asyncio.run(main())
 ```
@@ -227,7 +228,7 @@ asyncio.run(main())
 
 ```typescript
 import {
-  InsufficientBalanceError,
+  InsufficientFundsError,
   InvalidStateTransitionError,
   DeadlineExpiredError,
 } from '@agirails/sdk';
@@ -235,12 +236,12 @@ import {
 try {
   await client.basic.pay({...});
 } catch (error) {
-  if (error instanceof InsufficientBalanceError) {
-    console.log(`Need: ${error.required} USDC, have: ${error.available}`);
+  if (error instanceof InsufficientFundsError) {
+    console.log(error.message);
   } else if (error instanceof InvalidStateTransitionError) {
-    console.log(`Cannot: ${error.currentState} → ${error.targetState}`);
+    console.log(error.message);
   } else if (error instanceof DeadlineExpiredError) {
-    console.log(`Deadline expired`);
+    console.log(error.message);
   }
 }
 ```

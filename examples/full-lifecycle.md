@@ -30,7 +30,7 @@ async function requesterWorkflow() {
   // Step 1: Create transaction (State: INITIATED)
   const txId = await client.standard.createTransaction({
     provider: process.env.PROVIDER_ADDRESS!,
-    amount: ethers.parseUnits('10', 6),  // Max budget: $10 USDC
+    amount: '10',  // Max budget: $10 USDC (user-friendly)
     deadline: Math.floor(Date.now() / 1000) + 86400,  // 24h
     disputeWindow: 172800,  // 48h dispute window
     serviceDescription: 'Translate 500 words English to Spanish',
@@ -41,9 +41,11 @@ async function requesterWorkflow() {
   // (Provider transitions to QUOTED)
 
   // Step 3: Accept quote by locking escrow (State: COMMITTED)
-  const tx = await client.standard.getTransaction(txId);
-  if (tx.quotedAmount <= ethers.parseUnits('10', 6)) {
-    await client.standard.linkEscrow(txId);
+  // Quote amount should be provided out-of-band (or via your own indexer)
+  const quotedAmount = ethers.parseUnits('5', 6); // Example quote
+  let escrowId: string;
+  if (quotedAmount <= ethers.parseUnits('10', 6)) {
+    escrowId = await client.standard.linkEscrow(txId);
     console.log(`[COMMITTED] Accepted quote, escrow locked`);
   } else {
     await client.standard.transitionState(txId, 'CANCELLED');
@@ -57,11 +59,12 @@ async function requesterWorkflow() {
   // Step 6: Verify delivery and release payment (State: SETTLED)
   const status = await client.basic.checkStatus(txId);
   if (status.state === 'DELIVERED') {
-    // Validate the result off-chain...
-    const resultValid = await validateTranslation(status.resultUrl);
+    // Validate the result off-chain (result location is app-specific)
+    const resultValid = await validateTranslation('ipfs://...or https://...');
 
     if (resultValid) {
-      await client.standard.releaseEscrow(txId);
+      // Use the escrowId captured earlier
+      await client.standard.releaseEscrow(escrowId);
       console.log(`[SETTLED] Payment released to provider`);
     } else {
       await client.standard.transitionState(txId, 'DISPUTED');
@@ -105,8 +108,7 @@ async function providerWorkflow(txId: string) {
   await client.standard.transitionState(txId, 'DELIVERED', deliveryProof);
   console.log(`[DELIVERED] Work delivered, waiting for payment`);
 
-  // Step 6: Wait for settlement...
-  // Funds auto-release after dispute window OR requester releases early
+  // Step 6: Wait for requester to release after dispute window
 }
 
 // ===========================================
@@ -167,7 +169,7 @@ T+2m    COMMITTED       Requester accepts, escrow locked
 T+3m    IN_PROGRESS     Provider starts work (REQUIRED!)
 T+1h    DELIVERED       Provider delivers translation
 T+1h    [dispute window starts - 48 hours]
-T+49h   SETTLED         Auto-release (or requester releases early)
+T+49h   SETTLED         Requester releases after dispute window
 
 Alternative path:
 T+2h    DISPUTED        Requester raises quality dispute
@@ -182,11 +184,7 @@ T+3h    SETTLED         Mediator resolves (30/65/5 split)
 const status = await client.basic.checkStatus(txId);
 
 console.log(`State: ${status.state}`);
-console.log(`Amount: ${status.amount}`);
-console.log(`Created: ${new Date(status.createdAt * 1000)}`);
-console.log(`Deadline: ${new Date(status.deadline * 1000)}`);
 console.log(`Can dispute: ${status.canDispute}`);
-console.log(`Dispute window ends: ${status.disputeWindowEnd}`);
 ```
 
 ## Key Points
@@ -194,5 +192,5 @@ console.log(`Dispute window ends: ${status.disputeWindowEnd}`);
 1. **IN_PROGRESS is mandatory** - Contract rejects COMMITTED → DELIVERED
 2. **Proofs must be ABI-encoded** - Use `ethers.AbiCoder`
 3. **Dispute window protects both parties** - Default 48 hours
-4. **Auto-settlement** - Funds release if no dispute raised
+4. **Manual settlement** - Requester releases after dispute window
 5. **Mediator has final say** - Can split funds any way during dispute

@@ -39,8 +39,8 @@ The Agent Commerce Transaction Protocol uses an 8-state machine for secure, trus
                            │ Provider delivers + proof
                            ▼
                     ┌─────────────┐
-         Dispute ──►│  DELIVERED  │◄── Auto-settle after
-                    └──────┬──────┘    dispute window
+         Dispute ──►│  DELIVERED  │
+                    └──────┬──────┘
                            │
               ┌────────────┼────────────┐
               │            │            │
@@ -88,15 +88,13 @@ await client.standard.transitionState(txId, 'DELIVERED', proof);
 ```
 
 ### DELIVERED → SETTLED
-**Who**: Requester (explicit release) OR Auto (after dispute window)
+**Who**: Requester (explicit release)
 ```typescript
 // Explicit release
-await client.standard.releaseEscrow(txId);
-
-// Auto-release happens after disputeWindow seconds
+await client.standard.releaseEscrow(escrowId);
 ```
 
-### Any → DISPUTED
+### DELIVERED → DISPUTED
 **Who**: Requester or Provider (before SETTLED)
 ```typescript
 await client.standard.transitionState(txId, 'DISPUTED');
@@ -137,13 +135,13 @@ The dispute window (default 48 hours) protects both parties:
 
 - **Requester**: Can dispute if delivery is unsatisfactory
 - **Provider**: Gets paid after window if no dispute raised
-- **Auto-settlement**: Funds release automatically after window
+- **Settlement**: Requester releases after window
 
 ```typescript
 // Check if dispute window is active
 const status = await client.basic.checkStatus(txId);
 if (status.canDispute) {
-  console.log(`Dispute window ends: ${status.disputeWindowEnd}`);
+  console.log(`Dispute window is active`);
 }
 ```
 

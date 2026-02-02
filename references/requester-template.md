@@ -5,15 +5,17 @@ Complete template for building an agent that buys services through AGIRAILS.
 ## Full TypeScript Implementation
 
 ```typescript
-import { ACTPClient, Transaction, TransactionState } from '@agirails/sdk';
+import { ACTPClient, MockTransaction } from '@agirails/sdk';
 import { ethers } from 'ethers';
 
 interface ServiceRequest {
   providerAddress: string;
   task: any;
-  maxBudget: bigint;
+  maxBudget: string; // User-friendly USDC amount (e.g., "5")
   deadline: number; // Unix timestamp
   disputeWindow?: number; // Seconds, default 48h
+  escrowId?: string;
+  autoCommit?: boolean; // If true, link escrow immediately (skip quotes)
 }
 
 interface CompletedJob {
@@ -43,9 +45,11 @@ export class RequesterAgent {
     this.wallet = await this.client.getAddress();
     console.log(`Requester agent started: ${this.wallet}`);
 
-    // Check balance
-    const balance = await this.client.getBalance(this.wallet);
-    console.log(`USDC Balance: ${ethers.formatUnits(balance, 6)}`);
+    // Check balance (mock mode only)
+    if (this.client.getMode() === 'mock') {
+      const balance = await this.client.getBalance(this.wallet);
+      console.log(`USDC Balance: ${ethers.formatUnits(balance, 6)}`);
+    }
 
     // Start listening for responses
     this.setupEventListeners();
@@ -80,12 +84,15 @@ export class RequesterAgent {
     console.log(`Transaction created: ${txId}`);
 
     // 2. SDK HANDLES: Link escrow (locks funds)
-    await this.client.standard.linkEscrow(txId);
-
-    console.log(`Escrow linked, funds locked`);
+    // If you expect quotes, skip this and wait for QUOTED.
+    let escrowId: string | undefined;
+    if (request.autoCommit !== false) {
+      escrowId = await this.client.standard.linkEscrow(txId);
+      console.log(`Escrow linked, funds locked`);
+    }
 
     // Track pending request
-    this.pendingRequests.set(txId, request);
+    this.pendingRequests.set(txId, { ...request, escrowId });
 
     return txId;
   }
@@ -94,16 +101,19 @@ export class RequesterAgent {
   // QUOTE HANDLING (YOU IMPLEMENT: accept/reject logic)
   // ============================================================
 
-  private async onQuoteReceived(tx: Transaction) {
+  private async onQuoteReceived(tx: MockTransaction, quotedAmount: bigint) {
     const request = this.pendingRequests.get(tx.id);
     if (!request) return;
 
-    console.log(`Quote received for ${tx.id}: ${ethers.formatUnits(tx.quotedAmount, 6)} USDC`);
+    console.log(`Quote received for ${tx.id}: ${ethers.formatUnits(quotedAmount, 6)} USDC`);
 
     // YOUR LOGIC: Decide if quote is acceptable
-    if (this.isQuoteAcceptable(tx.quotedAmount, request.maxBudget)) {
+    if (this.isQuoteAcceptable(quotedAmount, ethers.parseUnits(request.maxBudget, 6))) {
       // SDK HANDLES: Accept quote by linking escrow with quoted amount
-      await this.client.standard.linkEscrow(tx.id);
+      if (!request.escrowId) {
+        const escrowId = await this.client.standard.linkEscrow(tx.id);
+        request.escrowId = escrowId;
+      }
       console.log(`Quote accepted, waiting for delivery`);
     } else {
       // SDK HANDLES: Cancel if quote too high
@@ -127,29 +137,21 @@ export class RequesterAgent {
   // DELIVERY HANDLING (YOU IMPLEMENT: validation logic)
   // ============================================================
 
-  private async onDelivery(tx: Transaction) {
+  private async onDelivery(tx: MockTransaction) {
     console.log(`Delivery received for ${tx.id}`);
 
     const request = this.pendingRequests.get(tx.id);
     if (!request) return;
 
-    // 1. Fetch the result
-    const result = await this.fetchResult(tx.resultUrl);
+    // 1. Fetch the result (URL provided out-of-band or via your indexer)
+    const result = await this.fetchResult('ipfs://...or https://...');
 
-    // 2. Verify hash matches (protocol also checks this)
-    const expectedHash = ethers.keccak256(ethers.toUtf8Bytes(result));
-    if (expectedHash !== tx.resultHash) {
-      console.log(`Hash mismatch! Raising dispute.`);
-      await this.client.standard.transitionState(tx.id, 'DISPUTED');
-      return;
-    }
-
-    // 3. YOUR LOGIC: Validate result quality
+    // 2. YOUR LOGIC: Validate result quality
     const validation = await this.validateResult(result, request.task);
 
     if (validation.passed) {
       // SDK HANDLES: Release payment to provider
-      await this.client.standard.releaseEscrow(tx.id);
+      await this.client.standard.releaseEscrow(request.escrowId!);
       console.log(`Payment released for ${tx.id}`);
     } else {
       // SDK HANDLES: Dispute flow (state transition)
@@ -216,7 +218,7 @@ export class RequesterAgent {
   // SETTLEMENT (SDK handles, you just track)
   // ============================================================
 
-  private async onSettled(tx: Transaction) {
+  private async onSettled(tx: MockTransaction) {
     const request = this.pendingRequests.get(tx.id);
     if (!request) return;
 
@@ -281,7 +283,7 @@ async function main() {
       targetLanguage: 'Spanish',
       minLength: 10,
     },
-    maxBudget: ethers.parseUnits('5', 6), // $5 USDC max
+    maxBudget: '5', // $5 USDC max
     deadline: Math.floor(Date.now() / 1000) + 86400, // 24h from now
   });
 
@@ -349,12 +351,13 @@ class RequesterAgent:
         return {"passed": True}
 
     async def on_delivery(self, tx):
-        result = await self.fetch_result(tx.result_url)
-        validation = await self.validate_result(result, tx.metadata)
+        result = await self.fetch_result("ipfs://...or https://...")
+        task = {"description": tx.service_description}
+        validation = await self.validate_result(result, task)
 
         if validation["passed"]:
             # SDK HANDLES: Payment release
-            await self.client.standard.release_escrow(tx.id)
+            await self.client.standard.release_escrow(tx.escrow_id)
         else:
             # SDK HANDLES: Dispute flow (state transition)
             await self.client.standard.transition_state(tx.id, "DISPUTED")

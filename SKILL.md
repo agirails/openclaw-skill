@@ -92,7 +92,7 @@ Human/Agent requests service
         ↓
    DELIVERED ──► Dispute window (48h default)
         ↓
-    SETTLED ◄── Auto-release or manual release
+    SETTLED ◄── Manual release (requester calls releaseEscrow)
 
    DISPUTED ──► Mediator resolves (splits funds)
    CANCELLED ──► Refund to requester
@@ -113,13 +113,13 @@ Human/Agent requests service
 
 | Action | Who | Description |
 |--------|-----|-------------|
-| `pay` | Requester | Simple payment (handles full flow) |
+| `pay` | Requester | Simple payment (create + escrow lock) |
 | `checkStatus` | Anyone | Get transaction state |
 | `createTransaction` | Requester | Create with custom params |
 | `linkEscrow` | Requester | Lock funds in escrow |
 | `transitionState` | Provider | Quote, start, deliver |
 | `releaseEscrow` | Requester | Release funds to provider |
-| `dispute` | Either | Raise dispute for mediation |
+| `transitionState('DISPUTED')` | Either | Raise dispute for mediation |
 
 ---
 
@@ -150,22 +150,21 @@ console.log(`State: ${result.state}`);
 ### Advanced Payment (Full Control)
 
 ```typescript
-import { ethers } from 'ethers';
-
 // 1. Create transaction
 const txId = await client.standard.createTransaction({
   provider: '0xProviderAddress',
-  amount: ethers.parseUnits('100', 6),  // 100 USDC
+  amount: '100',  // 100 USDC (user-friendly)
   deadline: Math.floor(Date.now() / 1000) + 86400,
   disputeWindow: 172800,  // 48 hours
   serviceDescription: 'Translate 500 words to Spanish',
 });
 
 // 2. Lock funds in escrow
-await client.standard.linkEscrow(txId);
+const escrowId = await client.standard.linkEscrow(txId);
 
 // 3. Wait for delivery... then release
-await client.standard.releaseEscrow(txId);
+// ...wait for DELIVERED
+await client.standard.releaseEscrow(escrowId);
 ```
 
 ---
@@ -189,7 +188,7 @@ const disputeWindow = 172800;  // 48 hours
 const deliveryProof = abiCoder.encode(['uint256'], [disputeWindow]);
 await client.standard.transitionState(txId, 'DELIVERED', deliveryProof);
 
-// 4. Funds auto-release after dispute window
+// 4. Requester releases after dispute window (or earlier if satisfied)
 ```
 
 **⚠️ CRITICAL:** `IN_PROGRESS` is **required** before `DELIVERED`. Contract rejects direct `COMMITTED → DELIVERED`.
@@ -231,9 +230,7 @@ const resolutionProof = abiCoder.encode(
 const status = await client.basic.checkStatus(txId);
 
 console.log(`State: ${status.state}`);
-console.log(`Amount: ${status.amount}`);
 console.log(`Can dispute: ${status.canDispute}`);
-console.log(`Dispute window ends: ${status.disputeWindowEnd}`);
 ```
 
 ---
@@ -303,19 +300,18 @@ const client = await ACTPClient.create({
 
 ```typescript
 import {
-  InsufficientBalanceError,
+  InsufficientFundsError,
   InvalidStateTransitionError,
   DeadlineExpiredError,
-  NotAuthorizedError,
 } from '@agirails/sdk';
 
 try {
   await client.basic.pay({...});
 } catch (error) {
-  if (error instanceof InsufficientBalanceError) {
-    console.log(`Need ${error.required} USDC, have ${error.available}`);
+  if (error instanceof InsufficientFundsError) {
+    console.log(error.message);
   } else if (error instanceof InvalidStateTransitionError) {
-    console.log(`Cannot go from ${error.currentState} to ${error.targetState}`);
+    console.log(`Invalid state transition`);
   }
 }
 ```

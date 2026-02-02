@@ -5,7 +5,7 @@ Complete template for building an agent that sells services through AGIRAILS.
 ## Full TypeScript Implementation
 
 ```typescript
-import { ACTPClient, Transaction, TransactionState } from '@agirails/sdk';
+import { ACTPClient, MockTransaction } from '@agirails/sdk';
 import { ethers } from 'ethers';
 
 interface ServiceConfig {
@@ -67,7 +67,7 @@ export class ProviderAgent {
   // REQUEST HANDLING (YOU IMPLEMENT: pricing logic)
   // ============================================================
 
-  private async onNewRequest(tx: Transaction) {
+  private async onNewRequest(tx: MockTransaction) {
     console.log(`New request: ${tx.id}`);
 
     // Check capacity
@@ -77,10 +77,11 @@ export class ProviderAgent {
     }
 
     // YOUR LOGIC: Calculate price based on request
-    const quote = this.calculateQuote(tx.metadata);
+    const task = this.getTaskFromServiceDescription(tx.serviceDescription);
+    const quote = this.calculateQuote(task);
 
     // YOUR LOGIC: Decide if you want this job
-    if (!this.shouldAcceptJob(tx.metadata)) {
+    if (!this.shouldAcceptJob(task)) {
       console.log(`Declining job: ${tx.id}`);
       return;
     }
@@ -129,13 +130,13 @@ export class ProviderAgent {
   // WORK EXECUTION (YOU IMPLEMENT: service logic)
   // ============================================================
 
-  private async onCommitted(tx: Transaction) {
+  private async onCommitted(tx: MockTransaction) {
     console.log(`Job committed: ${tx.id}`);
 
     // Track active job
     this.activeJobs.set(tx.id, {
       txId: tx.id,
-      metadata: tx.metadata,
+      metadata: this.getTaskFromServiceDescription(tx.serviceDescription),
       startedAt: Date.now(),
     });
 
@@ -144,7 +145,7 @@ export class ProviderAgent {
 
     try {
       // YOUR LOGIC: Perform the service
-      const result = await this.performService(tx.metadata);
+      const result = await this.performService(this.getTaskFromServiceDescription(tx.serviceDescription));
 
       // Get transaction for dispute window
       const txData = await this.client.standard.getTransaction(tx.id);
@@ -204,7 +205,7 @@ export class ProviderAgent {
   // SETTLEMENT (SDK handles, you just log)
   // ============================================================
 
-  private async onSettled(tx: Transaction) {
+  private async onSettled(tx: MockTransaction) {
     console.log(`Settled: ${tx.id}`);
     console.log(`Earned (gross): ${ethers.formatUnits(tx.amount, 6)} USDC`);
 
@@ -215,7 +216,7 @@ export class ProviderAgent {
   // DISPUTE HANDLING (Protocol handles resolution)
   // ============================================================
 
-  private async onDispute(tx: Transaction) {
+  private async onDispute(tx: MockTransaction) {
     console.log(`Dispute raised on: ${tx.id}`);
 
     // Protocol handles dispute resolution via mediator
@@ -246,6 +247,12 @@ export class ProviderAgent {
   private async uploadToIPFS(content: string): Promise<string> {
     // Your IPFS integration
     throw new Error('Implement your IPFS upload');
+  }
+
+  private getTaskFromServiceDescription(serviceDescription: string): any {
+    // If you store full task metadata off-chain, look it up by hash here.
+    // For mock mode, you can pass a plain description string.
+    return { description: serviceDescription };
   }
 }
 
@@ -321,7 +328,8 @@ class ProviderAgent:
         return result_hash, result_url
 
     async def handle_request(self, tx):
-        quote = self.calculate_quote(tx.metadata)
+        task = self.get_task_from_service_description(tx.service_description)
+        quote = self.calculate_quote(task)
 
         # SDK HANDLES: State transition
         quote_proof = "0x" + encode(["uint256"], [quote]).hex()
@@ -332,7 +340,8 @@ class ProviderAgent:
         await self.client.standard.transition_state(tx.id, "IN_PROGRESS")
 
         # YOUR LOGIC: Do the work
-        result = await self.perform_service(tx.metadata)
+        task = self.get_task_from_service_description(tx.service_description)
+        result = await self.perform_service(task)
 
         # Get dispute window for proof encoding
         dispute_window = tx.dispute_window or 172800  # default 2 days
@@ -346,6 +355,10 @@ class ProviderAgent:
 
     async def upload_to_ipfs(self, content: str) -> str:
         raise NotImplementedError("Implement IPFS upload")
+
+    def get_task_from_service_description(self, service_description: str) -> dict:
+        # If you store full task metadata off-chain, look it up by hash here.
+        return {"description": service_description}
 ```
 
 ## What You Must Implement
@@ -365,7 +378,7 @@ class ProviderAgent:
 | State machine | All 8 states, transitions, validation |
 | Escrow | Fund locking, release, refunds |
 | Events | Transaction lifecycle notifications |
-| Proof recording | Hash and URL stored on-chain |
+| Proof recording | Off-chain or attestation (app-specific) |
 | Fee deduction | 1% / $0.05 min automatic |
 | Dispute flow | Window timing, mediator routing |
-| Auto-settlement | Release after dispute window |
+| Settlement | Requester releases after dispute window |
