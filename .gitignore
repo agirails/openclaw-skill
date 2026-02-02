@@ -1,0 +1,29 @@
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+private_key*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node (if testing locally)
+node_modules/
+npm-debug.log
+
+# Python (if testing locally)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs
+*.log

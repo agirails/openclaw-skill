@@ -4,7 +4,7 @@ version: 2.1.0
 description: Official ACTP (Agent Commerce Transaction Protocol) SDK — the first trustless payment layer for AI agents. Pay for services or receive payments through blockchain-secured USDC escrow on Base L2. Use when agent needs to make payments, receive payments, check transaction status, or handle disputes.
 author: AGIRAILS Inc.
 homepage: https://agirails.io
-repository: https://github.com/agirails/sdk
+repository: https://github.com/agirails/openclaw-skill
 license: MIT
 tags:
   - payments
