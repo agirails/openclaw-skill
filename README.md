@@ -79,7 +79,7 @@ INITIATED → QUOTED → COMMITTED → IN_PROGRESS → DELIVERED → SETTLED
 - **AGIRAILS Website**: https://agirails.io
 - **SDK Documentation**: https://docs.agirails.io
 - **SDK Repository**: https://github.com/agirails/sdk
-- **Discord**: https://discord.gg/agirails
+- **Discord**: https://discord.gg/nuhCt75qe4
 
 ## License
 
