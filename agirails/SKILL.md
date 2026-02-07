@@ -1,7 +1,7 @@
 ---
 name: AGIRAILS Payments
-version: 2.1.0
-description: Official ACTP (Agent Commerce Transaction Protocol) SDK — the first trustless payment layer for AI agents. Pay for services or receive payments through blockchain-secured USDC escrow on Base L2. Use when agent needs to make payments, receive payments, check transaction status, or handle disputes.
+version: 3.0.0
+description: Official ACTP (Agent Commerce Transaction Protocol) SDK — the first trustless payment layer for AI agents. Pay for services via escrow (ACTP) or instant HTTP payments (x402). Receive payments, check transaction status, resolve agent identities, or handle disputes — all with USDC on Base L2.
 author: AGIRAILS Inc.
 homepage: https://agirails.io
 repository: https://github.com/agirails/openclaw-skill
@@ -156,6 +156,40 @@ console.log(`Transaction: ${result.txId}`);
 console.log(`State: ${result.state}`);
 ```
 
+### Instant HTTP Payment (x402)
+
+For simple API calls with no deliverables or disputes, use x402 — atomic, one-step:
+
+```typescript
+import { ACTPClient } from '@agirails/sdk';
+
+const client = await ACTPClient.create({
+  mode: 'mainnet',
+});
+
+const result = await client.basic.pay({
+  to: 'https://api.provider.com/service',  // HTTPS endpoint that returns 402
+  amount: '5.00',
+});
+
+console.log(result.response?.status); // 200
+// No release() needed — x402 is atomic (instant settlement)
+```
+
+> **ACTP vs x402 — when to use which?**
+>
+> | | ACTP (escrow) | x402 (instant) |
+> |---|---|---|
+> | **Use for** | Complex jobs — code review, audits, translations, anything with deliverables | Simple API calls — lookups, queries, one-shot requests |
+> | **Payment flow** | Lock USDC → work → deliver → dispute window → settle | Pay → get response (atomic, one step) |
+> | **Dispute protection** | Yes — 48h window, on-chain evidence | No — payment is final |
+> | **Escrow** | Yes — funds locked until delivery | No — instant settlement |
+> | **Analogy** | Hiring a contractor | Buying from a vending machine |
+>
+> Rule of thumb: if the provider needs time to do work → ACTP. If it's a synchronous HTTP call → x402.
+
+---
+
 ### Advanced Payment (Full Control)
 
 ```typescript
@@ -303,6 +337,45 @@ const client = await ACTPClient.create({
 
 ---
 
+## Identity (ERC-8004)
+
+Every agent gets a portable on-chain identity:
+
+- **Optional** — register via the ERC-8004 bridge module (`@agirails/sdk/erc8004`). Neither `actp init` nor `Agent.start()` registers identity automatically.
+- **Portable** — if registered, any marketplace reading ERC-8004 recognizes you
+- **Reputation** — settlement outcomes are reported on-chain only if the agent has a non-zero `agentId` set during transaction creation and `release()` is called explicitly
+
+```typescript
+import { ERC8004Bridge, ReputationReporter } from '@agirails/sdk';
+
+// Resolve agent identity (read-only, no gas)
+const bridge = new ERC8004Bridge({ network: 'base-sepolia' });
+const agent = await bridge.resolveAgent('12345');
+console.log(agent.wallet);  // payment address
+
+// Report reputation (requires signer, pays gas)
+const reporter = new ReputationReporter({ network: 'base-sepolia', signer });
+await reporter.reportSettlement({
+  agentId: '12345',
+  txId: '0x...',
+  capability: 'code_review',
+});
+```
+
+---
+
+## Capabilities (MVP limitation)
+
+The `capabilities` list is a **naming convention**, not a discovery mechanism.
+
+- `provide('code-review')` only matches `request('code-review')` — exact string match
+- There is no global registry, search, or automatic matching between agents
+- Requesters must know the provider's address and service name
+- ServiceDirectory is in-memory, per-process — a provider in one process is not visible to a requester in another
+- The planned Job Board (Phase 1D) will add public job posting and bidding
+
+---
+
 ## Error Handling
 
 ```typescript
@@ -351,14 +424,40 @@ asyncio.run(main())
 
 ---
 
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `actp init` | Initialize ACTP in current directory |
+| `actp init --scaffold` | Generate starter agent.ts (use --intent earn/pay/both) |
+| `actp pay <to> <amount>` | Create a payment transaction |
+| `actp balance [address]` | Check USDC balance |
+| `actp tx status <txId>` | Check transaction state |
+| `actp tx list` | List all transactions |
+| `actp tx deliver <txId>` | Mark transaction as delivered |
+| `actp tx settle <txId>` | Release escrow funds |
+| `actp tx cancel <txId>` | Cancel a transaction |
+| `actp watch <txId>` | Watch transaction state changes |
+| `actp simulate pay` | Dry-run a payment |
+| `actp simulate fee <amount>` | Calculate fee for amount |
+| `actp mint <address> <amount>` | Mint test USDC (mock only) |
+| `actp config show` | View current configuration |
+
+All commands support `--json` for machine-readable output and `-q`/`--quiet` for minimal output.
+
+---
+
 ## Troubleshooting
 
 | Problem | Cause | Solution |
 |---------|-------|----------|
 | `COMMITTED → DELIVERED` reverts | Missing IN_PROGRESS | Add `transitionState(txId, 'IN_PROGRESS')` first |
 | Invalid proof error | Wrong encoding | Use `ethers.AbiCoder` with correct types |
-| Insufficient balance | Not enough USDC | Bridge USDC to Base via [bridge.base.org](https://bridge.base.org) |
+| Insufficient balance | Not enough USDC | Mock: `actp mint <address> 10000`. Testnet: get test USDC from a faucet. Mainnet: bridge via [bridge.base.org](https://bridge.base.org) |
 | Deadline expired | Too slow | Create new transaction with longer deadline |
+| Transaction stuck in INITIATED | No provider registered | Ensure a provider is running with `provide('exact-service-name', handler)` on the same network |
+| RPC 503 errors | Rate limits | Set `BASE_SEPOLIA_RPC` env var to an Alchemy or other provider URL |
+| Mainnet $1000 limit | Security cap | Mainnet transactions capped at $1,000 USDC on unaudited contracts |
 
 ---
 
