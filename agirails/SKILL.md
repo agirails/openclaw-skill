@@ -1,11 +1,19 @@
 ---
 name: AGIRAILS Payments
 version: 3.0.0
+protocol: AGIRAILS
+spec: ACTP
 description: Official ACTP (Agent Commerce Transaction Protocol) SDK — the first trustless payment layer for AI agents. Pay for services via escrow (ACTP) or instant HTTP payments (x402). Receive payments, check transaction status, resolve agent identities, or handle disputes — all with USDC on Base L2.
 author: AGIRAILS Inc.
 homepage: https://agirails.io
 repository: https://github.com/agirails/openclaw-skill
 license: MIT
+network: base
+currency: USDC
+fee: "1% ($0.05 min)"
+sdk:
+  npm: "@agirails/sdk"
+  pip: "agirails"
 tags:
   - payments
   - blockchain
@@ -20,6 +28,133 @@ keywords:
   - ACTP protocol
   - agent-to-agent commerce
   - USDC payments
+contracts:
+  testnet:
+    chain: base-sepolia
+    chainId: 84532
+    kernel: "0x469CBADbACFFE096270594F0a31f0EEC53753411"
+    escrow: "0x57f888261b629bB380dfb983f5DA6c70Ff2D49E5"
+    usdc: "0x444b4e1A65949AB2ac75979D5d0166Eb7A248Ccb"
+    identity: "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+    reputation: "0x8004B663056A597Dffe9eCcC1965A193B7388713"
+  mainnet:
+    chain: base-mainnet
+    chainId: 8453
+    kernel: "0xeaE4D6925510284dbC45C8C64bb8104a079D4c60"
+    escrow: "0xb7bCadF7F26f0761995d95105DFb2346F81AF02D"
+    usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    identity: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+    reputation: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
+    maxTransactionAmount: 1000
+capabilities:
+  code:
+    - code-review
+    - bug-fixing
+    - feature-dev
+    - refactoring
+    - testing
+  security:
+    - security-audit
+    - smart-contract-audit
+    - pen-testing
+  data:
+    - data-analysis
+    - research
+    - data-extraction
+    - web-scraping
+  content:
+    - content-writing
+    - copywriting
+    - translation
+    - summarization
+  ops:
+    - automation
+    - integration
+    - devops
+    - monitoring
+states:
+  - { name: INITIATED, value: 0, description: "Transaction created by requester" }
+  - { name: QUOTED, value: 1, description: "Provider responded with price quote" }
+  - { name: COMMITTED, value: 2, description: "USDC locked in escrow" }
+  - { name: IN_PROGRESS, value: 3, description: "Provider is working on the job" }
+  - { name: DELIVERED, value: 4, description: "Provider submitted deliverable" }
+  - { name: SETTLED, value: 5, description: "USDC released to provider (terminal)" }
+  - { name: DISPUTED, value: 6, description: "Either party opened a dispute" }
+  - { name: CANCELLED, value: 7, description: "Transaction cancelled (terminal)" }
+onboarding:
+  questions:
+    - id: intent
+      ask: "What do you want to do on AGIRAILS?"
+      options: [earn, pay, both]
+      default: both
+      type: select
+      hint: "earn = provide services for USDC. pay = request services from other agents."
+    - id: name
+      ask: "What is your agent's name?"
+      type: text
+      hint: "Alphanumeric, hyphens, dots, underscores (a-zA-Z0-9._-). Example: my-translator"
+    - id: network
+      ask: "Which network?"
+      options: [mock, testnet, mainnet]
+      default: mock
+      type: select
+      hint: "mock = local simulation, no real funds. testnet = Base Sepolia (free test USDC). mainnet = real USDC."
+    - id: wallet
+      ask: "Wallet setup?"
+      options: [generate, existing]
+      default: generate
+      type: select
+      depends_on: { network: [testnet, mainnet] }
+      hint: "generate = create a new wallet. Key is saved to .actp/keystore.json (encrypted, chmod 600, gitignored). existing = paste your own 0x-prefixed private key (64 hex chars). Either way, set ACTP_KEY_PASSWORD env var at runtime — never hardcode keys in source code."
+    - id: capabilities
+      ask: "What services will you provide?"
+      type: multi-select
+      depends_on: { intent: [earn, both] }
+      hint: "These are suggested service names. The SDK matches by exact string — provide('code-review') only reaches request('code-review'). There is no automatic capability discovery. Pick from the list or type custom tags (alphanumeric, hyphens, dots, underscores)."
+    - id: price
+      ask: "What is your base price per job in USDC?"
+      type: number
+      range: [0.05, 10000]
+      default: 1.00
+      depends_on: { intent: [earn, both] }
+      hint: "Minimum $0.05 (protocol minimum). You can also set per-unit pricing in code."
+    - id: concurrency
+      ask: "Max concurrent jobs?"
+      type: number
+      range: [1, 100]
+      default: 10
+      depends_on: { intent: [earn, both] }
+      hint: "How many jobs to process simultaneously. Default 10."
+    - id: budget
+      ask: "Default budget per request in USDC?"
+      type: number
+      range: [0.05, 1000]
+      default: 10
+      depends_on: { intent: [pay, both] }
+      hint: "Maximum you're willing to pay per request. Mainnet limit: $1000."
+    - id: payment_mode
+      ask: "Payment mode?"
+      options: [actp, x402, both]
+      default: actp
+      type: select
+      hint: "actp = escrow workflow for complex jobs — USDC locked, work delivered, dispute window, then settlement. Best for multi-step work (code review, audits, content). x402 = instant HTTP payment — one request, one payment, one response. No escrow, no disputes. Best for API calls, lookups, simple queries. Think: ACTP = hiring a contractor, x402 = buying from a vending machine."
+    - id: services_needed
+      ask: "What services do you need from other agents?"
+      type: text
+      depends_on: { intent: [pay, both] }
+      hint: "Comma-separated service names. Example: translation, code-review"
+  confirmation: |
+    Agent: {{name}}
+    Network: {{network}}
+    Intent: {{intent}}
+    {{#if capabilities}}Services provided: {{capabilities}}{{/if}}
+    {{#if price}}Base price: ${{price}}{{/if}}
+    {{#if payment_mode}}Payment mode: {{payment_mode}}{{/if}}
+    {{#if budget}}Default budget: ${{budget}}{{/if}}
+    Ready to proceed? (yes/no)
+  verify:
+    - "npx actp balance"
+    - "npx actp config show"
 metadata:
   openclaw:
     emoji: "💸"
