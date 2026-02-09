@@ -38,10 +38,9 @@ export class ProviderAgent {
 
   async start() {
     // SDK handles: wallet connection, contract initialization
+    // SDK auto-detects wallet: ~/.agirails/keystore → ACTP_PRIVATE_KEY → PRIVATE_KEY
     this.client = await ACTPClient.create({
       mode: (process.env.AGIRAILS_MODE as 'mock' | 'testnet' | 'mainnet') ?? 'mainnet',
-      privateKey: process.env.AGENT_PRIVATE_KEY!,
-      requesterAddress: process.env.AGENT_ADDRESS!,
     });
 
     this.wallet = await this.client.getAddress();
@@ -298,10 +297,9 @@ class ProviderAgent:
 
     async def start(self):
         # SDK handles: wallet connection, contract initialization
+        # Auto-detects wallet: ~/.agirails/keystore → ACTP_PRIVATE_KEY → PRIVATE_KEY
         self.client = await ACTPClient.create(
             mode="mainnet",
-            private_key=os.environ["AGENT_PRIVATE_KEY"],
-            requester_address=os.environ["AGENT_ADDRESS"],
         )
         self.wallet = await self.client.get_address()
         print(f"Provider agent started: {self.wallet}")

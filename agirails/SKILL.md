@@ -35,14 +35,20 @@ contracts:
     kernel: "0x469CBADbACFFE096270594F0a31f0EEC53753411"
     escrow: "0x57f888261b629bB380dfb983f5DA6c70Ff2D49E5"
     usdc: "0x444b4e1A65949AB2ac75979D5d0166Eb7A248Ccb"
+    agentRegistry: "0xDd6D66924B43419F484aE981F174b803487AF25A"
+    archiveTreasury: "0xeB75DE7cF5ce77ab15BB0fFa3a2A79e6aaa554B0"
+    x402Relay: "0x4DCD02b276Dbeab57c265B72435e90507b6Ac81A"
     identity: "0x8004A818BFB912233c491871b3d84c89A494BD9e"
     reputation: "0x8004B663056A597Dffe9eCcC1965A193B7388713"
   mainnet:
     chain: base-mainnet
     chainId: 8453
-    kernel: "0xeaE4D6925510284dbC45C8C64bb8104a079D4c60"
-    escrow: "0xb7bCadF7F26f0761995d95105DFb2346F81AF02D"
+    kernel: "0x132B9eB321dBB57c828B083844287171BDC92d29"
+    escrow: "0x6aAF45882c4b0dD34130ecC790bb5Ec6be7fFb99"
     usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    agentRegistry: "0x6fB222CF3DDdf37Bcb248EE7BBBA42Fb41901de8"
+    archiveTreasury: "0x0516C411C0E8d75D17A768022819a0a4FB3cA2f2"
+    x402Relay: "0x81DFb954A3D58FEc24Fc9c946aC2C71a911609F8"
     identity: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
     reputation: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
     maxTransactionAmount: 1000
@@ -105,7 +111,7 @@ onboarding:
       default: generate
       type: select
       depends_on: { network: [testnet, mainnet] }
-      hint: "generate = create a new wallet. Key is saved to .actp/keystore.json (encrypted, chmod 600, gitignored). existing = paste your own 0x-prefixed private key (64 hex chars). Either way, set ACTP_KEY_PASSWORD env var at runtime — never hardcode keys in source code."
+      hint: "generate = create a new encrypted keystore at .actp/keystore.json (chmod 600, gitignored). Set ACTP_KEY_PASSWORD env var to decrypt at runtime. existing = set ACTP_PRIVATE_KEY env var with your 0x-prefixed private key (64 hex chars). The CLI does NOT accept pasted keys interactively — use env vars only. The SDK auto-detects: checks ACTP_PRIVATE_KEY first, then falls back to .actp/keystore.json decrypted with ACTP_KEY_PASSWORD. Never hardcode keys in source code."
     - id: capabilities
       ask: "What services will you provide?"
       type: multi-select
