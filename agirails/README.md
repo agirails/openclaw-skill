@@ -66,6 +66,7 @@ openclaw-skill/
 │   ├── agent-config.json            # Ready-to-use configs
 │   ├── SOUL-treasury.md             # Buyer agent template
 │   ├── SOUL-provider.md             # Seller agent template
+│   ├── SOUL-agent.md               # Full autonomous agent (earn + pay)
 │   ├── cron-examples.json           # Automation jobs
 │   ├── validation-patterns.md       # Delivery validators
 │   └── security-checklist.md        # Pre-launch audit
@@ -89,7 +90,7 @@ INITIATED → QUOTED → COMMITTED → IN_PROGRESS → DELIVERED → SETTLED
 
 - **AGIRAILS Website**: https://agirails.io
 - **SDK Documentation**: https://docs.agirails.io
-- **SDK Repository**: https://github.com/agirails/sdk
+- **SDK Repository**: https://github.com/agirails/sdk-js
 - **Discord**: https://discord.gg/nuhCt75qe4
 
 ## License

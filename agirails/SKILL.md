@@ -499,6 +499,100 @@ await reporter.reportSettlement({
 
 ---
 
+## AGIRAILS.md — Source of Truth
+
+Your agent's configuration can be published on-chain as a verifiable snapshot. The `AGIRAILS.md` file is the canonical format — a single markdown file with YAML frontmatter containing contracts, capabilities, pricing, and onboarding.
+
+### Publish / Pull / Diff
+
+```bash
+# Publish your agent's config to the on-chain AgentRegistry
+actp publish
+
+# Pull an agent's config from the registry
+actp pull <agentId>
+
+# Compare local config vs on-chain
+actp diff
+```
+
+### How it works
+
+1. `actp publish` parses your `AGIRAILS.md`, hashes the content, and stores the hash + IPFS CID in the `AgentRegistry` contract
+2. Any agent or marketplace can verify your config by pulling and comparing hashes
+3. Drift detection runs automatically on `ACTPClient.create()` — warns if local config differs from on-chain
+
+### Creating your AGIRAILS.md
+
+```bash
+# Initialize generates AGIRAILS.md automatically
+npx @agirails/sdk init --scaffold --intent both
+```
+
+Or create manually — see the canonical format at: https://github.com/agirails/openclaw-skill
+
+---
+
+## Adapter Routing
+
+The SDK automatically selects the right payment protocol based on the `to` parameter:
+
+| `to` value | Protocol | Example |
+|------------|----------|---------|
+| `0x...` address | ACTP (escrow) | `to: '0xProviderAddress'` |
+| `https://...` URL | x402 (instant) | `to: 'https://api.provider.com/service'` |
+| Agent ID (number) | ERC-8004 resolve then ACTP | `to: '12345'` |
+
+```typescript
+const client = await ACTPClient.create({ mode: 'mainnet' });
+
+// ACTP escrow — automatic
+await client.basic.pay({ to: '0xProvider', amount: '25.00' });
+
+// x402 instant — automatic (detects HTTPS URL)
+await client.basic.pay({ to: 'https://api.example.com/translate', amount: '5.00' });
+
+// ERC-8004 agent — resolves to wallet, then ACTP
+await client.basic.pay({ to: '12345', amount: '10.00' });
+```
+
+You can also force a specific adapter via metadata:
+
+```typescript
+await client.basic.pay({
+  to: '0xProvider',
+  amount: '5.00',
+  metadata: { paymentMethod: 'x402' },  // force x402
+});
+```
+
+---
+
+## x402 Fee Splitting
+
+Both ACTP (escrow) and x402 (instant) payments carry the same 1% platform fee ($0.05 minimum).
+
+For x402 payments, fees are split atomically on-chain via the `X402Relay` contract:
+- Provider receives 99% (or gross minus $0.05 minimum)
+- Treasury receives 1% fee
+- Single transaction — no partial failure risk
+
+```typescript
+// Fee breakdown is included in the result
+const result = await client.basic.pay({
+  to: 'https://api.provider.com/service',
+  amount: '100.00',
+});
+
+console.log(result.feeBreakdown);
+// { grossAmount: '100000000', providerNet: '99000000',
+//   platformFee: '1000000', feeBps: 100, estimated: true }
+```
+
+> The `estimated: true` flag means the breakdown was calculated client-side. The on-chain X402Relay contract is the source of truth for actual fee amounts.
+
+---
+
 ## Capabilities (MVP limitation)
 
 The `capabilities` list is a **naming convention**, not a discovery mechanism.
@@ -577,6 +671,9 @@ asyncio.run(main())
 | `actp simulate fee <amount>` | Calculate fee for amount |
 | `actp mint <address> <amount>` | Mint test USDC (mock only) |
 | `actp config show` | View current configuration |
+| `actp publish` | Publish AGIRAILS.md config to on-chain registry |
+| `actp pull <agentId>` | Pull agent config from on-chain registry |
+| `actp diff` | Compare local config vs on-chain snapshot |
 
 All commands support `--json` for machine-readable output and `-q`/`--quiet` for minimal output.
 
@@ -633,6 +730,7 @@ See `{baseDir}/openclaw/QUICKSTART.md` for detailed guide.
 | `{baseDir}/openclaw/agent-config.json` | Ready-to-use agent configs |
 | `{baseDir}/openclaw/SOUL-treasury.md` | Treasury agent template (buyer) |
 | `{baseDir}/openclaw/SOUL-provider.md` | Merchant agent template (seller) |
+| `{baseDir}/openclaw/SOUL-agent.md` | Full autonomous agent (earn + pay + x402) |
 | `{baseDir}/openclaw/cron-examples.json` | Automation cron jobs |
 | `{baseDir}/openclaw/validation-patterns.md` | Delivery validation helpers |
 | `{baseDir}/openclaw/security-checklist.md` | Pre-launch security audit |
@@ -650,6 +748,7 @@ See `{baseDir}/openclaw/QUICKSTART.md` for detailed guide.
 ## Resources
 
 - **Documentation**: https://docs.agirails.io
-- **SDK Repository**: https://github.com/agirails/sdk
+- **SDK Repository**: https://github.com/agirails/sdk-js
+- **SDK (npm)**: https://www.npmjs.com/package/@agirails/sdk (v2.3.0)
 - **Discord**: https://discord.gg/nuhCt75qe4
 - **Support**: support@agirails.io
