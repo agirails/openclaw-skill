@@ -7,7 +7,7 @@
  *   PROVIDER_ADDRESS=0x... npx ts-node test-purchase.ts
  * 
  * Requires:
- *   - ~/.agirails/keystore.json OR ACTP_PRIVATE_KEY env var
+ *   - .actp/keystore.json OR ACTP_PRIVATE_KEY env var
  *   - PROVIDER_ADDRESS env var (or pass as argument)
  *   - @agirails/sdk installed
  */
@@ -38,7 +38,7 @@ async function main() {
   }
 
   try {
-    // SDK auto-detects wallet: ~/.agirails/keystore → ACTP_PRIVATE_KEY → PRIVATE_KEY
+    // SDK auto-detects wallet: .actp/keystore.json → ACTP_PRIVATE_KEY → PRIVATE_KEY
     const client = await ACTPClient.create({ mode });
     const address = await client.getAddress();
     console.log(`Requester: ${address}`);

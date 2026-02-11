@@ -36,7 +36,7 @@ export class RequesterAgent {
 
   async start() {
     // SDK handles: wallet connection, contract initialization
-    // SDK auto-detects wallet: ~/.agirails/keystore → ACTP_PRIVATE_KEY → PRIVATE_KEY
+    // SDK auto-detects wallet: .actp/keystore.json → ACTP_PRIVATE_KEY → PRIVATE_KEY
     this.client = await ACTPClient.create({
       mode: (process.env.AGIRAILS_MODE as 'mock' | 'testnet' | 'mainnet') ?? 'mainnet',
     });
@@ -317,7 +317,7 @@ class RequesterAgent:
         self.pending_requests: Dict[str, ServiceRequest] = {}
 
     async def start(self):
-        # Auto-detects wallet: ~/.agirails/keystore → ACTP_PRIVATE_KEY → PRIVATE_KEY
+        # Auto-detects wallet: .actp/keystore.json → ACTP_PRIVATE_KEY → PRIVATE_KEY
         self.client = await ACTPClient.create(
             mode="mainnet",
         )

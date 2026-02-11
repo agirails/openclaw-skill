@@ -288,7 +288,7 @@ pip install agirails
 All generated code MUST follow these rules:
 - Wrap in `async function main() { ... } main().catch(console.error);` (SDK is CommonJS, no top-level await)
 - `ACTPClient.create()` uses `mode` parameter; `Agent()`, `provide()`, `request()` use `network` — same values, different names
-- Testnet/mainnet requesters: include `await transaction.release()` (mock auto-releases, real networks do NOT)
+- Testnet/mainnet requesters: release escrow after verifying delivery (mock auto-releases, real networks do NOT)
 
 Based on the owner's answers, generate the appropriate code.
 
@@ -370,9 +370,10 @@ async function main() {
   console.log(result);
   console.log(`Transaction: ${transaction.id}, Amount: ${transaction.amount}`);
 
-  // IMPORTANT: On testnet/mainnet, you MUST release escrow after verifying delivery.
+  // IMPORTANT: On testnet/mainnet, release escrow after verifying delivery.
   // Mock mode auto-releases after the dispute window — real networks do NOT.
-  // await transaction.release();
+  // const client = await ACTPClient.create({ mode: '{{network}}' });
+  // await client.standard.releaseEscrow(transaction.id);
 }
 
 main().catch(console.error);
@@ -439,7 +440,8 @@ async function main() {
 
   console.log(result);
   // IMPORTANT: On testnet/mainnet, release escrow after verifying delivery:
-  // await transaction.release();
+  // const actpClient = await ACTPClient.create({ mode: '{{network}}' });
+  // await actpClient.standard.releaseEscrow(transaction.id);
 }
 
 main().catch(console.error);
@@ -468,7 +470,7 @@ async function main() {
       budget: job.budget * 0.5,
     });
     // On testnet/mainnet, release escrow for the inner request:
-    // await sub.transaction.release();
+    // await agent.releaseEscrow(sub.transaction.id);
     return sub.result;
   });
 
@@ -918,7 +920,6 @@ await client.standard.transitionState(txId, 'SETTLED', resolution);
 // Development
 const client = await ACTPClient.create({
   mode: 'mock',
-  requesterAddress: '0x...',
 });
 await client.mintTokens('0x...', '1000000000');  // Mint test USDC
 
