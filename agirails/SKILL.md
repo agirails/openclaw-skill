@@ -1347,10 +1347,10 @@ onboarding:
       depends_on: { intent: [pay, both] }
       hint: "actp = escrow (complex jobs). x402 = instant (API calls). Both use same SDK."
     - id: services_needed
-      ask: "What services do you need from other agents?"
+      ask: "What service do you need from other agents? (ask once per service)"
       type: text
       depends_on: { intent: [pay, both] }
-      hint: "Comma-separated. Example: translation, code-review"
+      hint: "One service name per answer. If the user needs multiple, repeat this question. Example: code-review"
   confirmation: |
     Agent: {{name}} | Network: {{network}} | Intent: {{intent}}
     {{#if serviceTypes}}Services: {{serviceTypes}}{{/if}}
