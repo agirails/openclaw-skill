@@ -234,7 +234,7 @@ main().catch(console.error);
 import { request } from '@agirails/sdk';
 
 async function main() {
-  const { result, transaction } = await request('{{services_needed[0]}}', {
+  const { result, transaction } = await request('{{services_needed}}', {
     provider: '0xProviderAddress',
     input: { /* your data here */ },
     budget: {{budget}},
@@ -317,7 +317,7 @@ async function main() {
 
   await agent.start();
 
-  const { result, transaction } = await agent.request('{{services_needed[0]}}', {
+  const { result, transaction } = await agent.request('{{services_needed}}', {
     input: { text: 'Hello world' },
     budget: {{budget}},
   });
