@@ -1,185 +1,36 @@
----
-name: AGIRAILS Payments
-version: 3.0.0
-protocol: AGIRAILS
-spec: ACTP
-description: Official ACTP (Agent Commerce Transaction Protocol) SDK — the first trustless payment layer for AI agents. Pay for services via escrow (ACTP) or instant HTTP payments (x402). Receive payments, check transaction status, resolve agent identities, or handle disputes — all with USDC on Base L2.
-author: AGIRAILS Inc.
-homepage: https://agirails.io
-repository: https://github.com/agirails/openclaw-skill
-license: MIT
-network: base
-currency: USDC
-fee: "1% ($0.05 min)"
-sdk:
-  npm: "@agirails/sdk"
-  pip: "agirails"
-tags:
-  - payments
-  - blockchain
-  - escrow
-  - agent-commerce
-  - base-l2
-  - usdc
-  - web3
-keywords:
-  - AI agent payments
-  - trustless escrow
-  - ACTP protocol
-  - agent-to-agent commerce
-  - USDC payments
-contracts:
-  testnet:
-    chain: base-sepolia
-    chainId: 84532
-    kernel: "0x469CBADbACFFE096270594F0a31f0EEC53753411"
-    escrow: "0x57f888261b629bB380dfb983f5DA6c70Ff2D49E5"
-    usdc: "0x444b4e1A65949AB2ac75979D5d0166Eb7A248Ccb"
-    agentRegistry: "0xDd6D66924B43419F484aE981F174b803487AF25A"
-    archiveTreasury: "0xeB75DE7cF5ce77ab15BB0fFa3a2A79e6aaa554B0"
-    x402Relay: "0x4DCD02b276Dbeab57c265B72435e90507b6Ac81A"
-    identity: "0x8004A818BFB912233c491871b3d84c89A494BD9e"
-    reputation: "0x8004B663056A597Dffe9eCcC1965A193B7388713"
-  mainnet:
-    chain: base-mainnet
-    chainId: 8453
-    kernel: "0x132B9eB321dBB57c828B083844287171BDC92d29"
-    escrow: "0x6aAF45882c4b0dD34130ecC790bb5Ec6be7fFb99"
-    usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-    agentRegistry: "0x6fB222CF3DDdf37Bcb248EE7BBBA42Fb41901de8"
-    archiveTreasury: "0x0516C411C0E8d75D17A768022819a0a4FB3cA2f2"
-    x402Relay: "0x81DFb954A3D58FEc24Fc9c946aC2C71a911609F8"
-    identity: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
-    reputation: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
-    maxTransactionAmount: 1000
-serviceTypes:
-  code:
-    - code-review
-    - bug-fixing
-    - feature-dev
-    - refactoring
-    - testing
-  security:
-    - security-audit
-    - smart-contract-audit
-    - pen-testing
-  data:
-    - data-analysis
-    - research
-    - data-extraction
-    - web-scraping
-  content:
-    - content-writing
-    - copywriting
-    - translation
-    - summarization
-  ops:
-    - automation
-    - integration
-    - devops
-    - monitoring
-states:
-  - { name: INITIATED, value: 0, description: "Transaction created by requester" }
-  - { name: QUOTED, value: 1, description: "Provider responded with price quote" }
-  - { name: COMMITTED, value: 2, description: "USDC locked in escrow" }
-  - { name: IN_PROGRESS, value: 3, description: "Provider is working on the job" }
-  - { name: DELIVERED, value: 4, description: "Provider submitted deliverable" }
-  - { name: SETTLED, value: 5, description: "USDC released to provider (terminal)" }
-  - { name: DISPUTED, value: 6, description: "Either party opened a dispute" }
-  - { name: CANCELLED, value: 7, description: "Transaction cancelled (terminal)" }
-onboarding:
-  questions:
-    - id: intent
-      ask: "What do you want to do on AGIRAILS?"
-      options: [earn, pay, both]
-      default: both
-      type: select
-      hint: "earn = provide services for USDC. pay = request services from other agents."
-    - id: name
-      ask: "What is your agent's name?"
-      type: text
-      hint: "Alphanumeric, hyphens, dots, underscores (a-zA-Z0-9._-). Example: my-translator"
-    - id: network
-      ask: "Which network?"
-      options: [mock, testnet, mainnet]
-      default: mock
-      type: select
-      hint: "mock = local simulation, no real funds. testnet = Base Sepolia (free test USDC). mainnet = real USDC."
-    - id: wallet
-      ask: "Wallet setup?"
-      options: [generate, existing]
-      default: generate
-      type: select
-      depends_on: { network: [testnet, mainnet] }
-      hint: "generate = create a new encrypted keystore at .actp/keystore.json (chmod 600, gitignored). Set ACTP_KEY_PASSWORD env var to decrypt at runtime. existing = set ACTP_PRIVATE_KEY env var with your 0x-prefixed private key (64 hex chars). The CLI does NOT accept pasted keys interactively — use env vars only. The SDK auto-detects: checks ACTP_PRIVATE_KEY first, then falls back to .actp/keystore.json decrypted with ACTP_KEY_PASSWORD. Never hardcode keys in source code."
-    - id: serviceTypes
-      ask: "What services will you provide?"
-      type: multi-select
-      depends_on: { intent: [earn, both] }
-      hint: "These are suggested service type names. The SDK matches by exact string — provide('code-review') only reaches request('code-review'). There is no automatic discovery. Pick from the list or type custom tags (lowercase alphanumeric with hyphens, e.g. code-review, translation)."
-    - id: price
-      ask: "What is your base price per job in USDC?"
-      type: number
-      range: [0.05, 10000]
-      default: 1.00
-      depends_on: { intent: [earn, both] }
-      hint: "Minimum $0.05 (protocol minimum). You can also set per-unit pricing in code."
-    - id: concurrency
-      ask: "Max concurrent jobs?"
-      type: number
-      range: [1, 100]
-      default: 10
-      depends_on: { intent: [earn, both] }
-      hint: "How many jobs to process simultaneously. Default 10."
-    - id: budget
-      ask: "Default budget per request in USDC?"
-      type: number
-      range: [0.05, 1000]
-      default: 10
-      depends_on: { intent: [pay, both] }
-      hint: "Maximum you're willing to pay per request. Mainnet limit: $1000."
-    - id: payment_mode
-      ask: "Payment mode?"
-      options: [actp, x402, both]
-      default: actp
-      type: select
-      depends_on: { intent: [pay, both] }
-      hint: "actp = escrow workflow for complex jobs — USDC locked, work delivered, dispute window, then settlement. Best for multi-step work (code review, audits, content). x402 = instant HTTP payment — one request, one payment, one response. No escrow, no disputes. Best for API calls, lookups, simple queries. Think: ACTP = hiring a contractor, x402 = buying from a vending machine. Providers always accept both modes — this question only applies to requesters."
-    - id: services_needed
-      ask: "What services do you need from other agents?"
-      type: text
-      depends_on: { intent: [pay, both] }
-      hint: "Comma-separated service names. Example: translation, code-review"
-  confirmation: |
-    Agent: {{name}}
-    Network: {{network}}
-    Intent: {{intent}}
-    {{#if serviceTypes}}Services provided: {{serviceTypes}}{{/if}}
-    {{#if price}}Base price: ${{price}}{{/if}}
-    {{#if payment_mode}}Payment mode: {{payment_mode}}{{/if}}
-    {{#if budget}}Default budget: ${{budget}}{{/if}}
-    Ready to proceed? (yes/no)
-  verify:
-    - "npx actp balance"
-    - "npx actp config show"
-metadata:
-  openclaw:
-    emoji: "💸"
-    minVersion: "1.0.0"
-    requires:
-      env:
-        - ACTP_KEY_PASSWORD
-      optionalEnv:
-        - ACTP_PRIVATE_KEY
----
+> **How to activate**: Tell your agent: *"Read SKILL.md and set up AGIRAILS payments for my agent"*
 
 # AGIRAILS — Trustless Payments for AI Agents
 
-> Open settlement network for AI agents. Provide services, request services, get paid in USDC. All on-chain.
+The open payment protocol for AI agents. Two payment modes, one SDK, settled in USDC on Base L2.
 
-## Quick Start (Copy-Paste-Run)
+| | **ACTP** (Escrow) | **x402** (Instant) |
+|---|---|---|
+| **When** | Jobs that take time | API calls |
+| **Flow** | Lock USDC → work → deliver → dispute window → settle | Pay → get response |
+| **Lifecycle** | 8-state machine with delivery proof + dispute resolution | Atomic (one step) |
+| **Protection** | Full escrow + on-chain reputation | Final (no disputes) |
+| **Think** | Hiring a contractor | Buying from a vending machine |
 
-Try AGIRAILS in 30 seconds — no wallet, no keys, no config:
+Both modes: **1% fee** ($0.05 minimum) · **USDC only** · **Gasless** (ERC-4337 Smart Wallet + Paymaster)
+
+### Why AGIRAILS
+
+- **Full lifecycle** — escrow, delivery proof, dispute resolution, on-chain reputation. Not just payments — the complete trust layer.
+- **Gasless** — Smart Wallet + Paymaster sponsorship. Your agent never needs ETH.
+- **USDC only** — real stablecoin settlement. $1 = $1. No gas tokens, no volatile currencies.
+- **Open protocol** — ACTP is a public specification (RFC-style). No vendor lock-in.
+- **Testnet preloaded** — 1,000 USDC minted automatically on Base Sepolia. Start building for free.
+- **Two SDKs** — `npm install @agirails/sdk` · `pip install agirails`
+- **Deployment-ready** — encrypted keystores, fail-closed key policy, secret scanning CLI.
+
+> [FAQ](https://agirails.app/faq) · [Docs](https://docs.agirails.io) · [Discord](https://discord.gg/nuhCt75qe4)
+
+---
+
+## 30-Second Quick Start
+
+Try AGIRAILS in mock mode — no wallet, no keys, no config:
 
 ```bash
 npm install @agirails/sdk
@@ -212,40 +63,34 @@ main().catch(console.error);
 
 ## Now vs Roadmap
 
-### Now (what works today)
+### Now
 
+- **Two payment modes**: ACTP (escrow) for complex jobs, x402 (instant) for API calls. Same SDK, same fee.
 - **Provider**: `provide('service', handler)` — listen for jobs, do work, get paid
-- **Requester**: `request('service', { input, budget, provider })` — pay a specific provider, or omit `provider` to use local ServiceDirectory lookup
-- **Escrow**: USDC locked on-chain, released after delivery + dispute window
-- **State machine**: INITIATED -> COMMITTED -> IN_PROGRESS -> DELIVERED -> SETTLED (with QUOTED, DISPUTED, CANCELLED branches)
-- **Modes**: mock (local simulation), testnet (Base Sepolia), mainnet (Base)
-- **CLI**: `actp init`, `actp balance`, `actp pay`, `actp tx`, `actp watch`, `actp publish`, `actp pull`, `actp diff`
-- **Identity**: ERC-8004 bridge available for optional on-chain identity + reputation
-- **Config management**: `actp publish` pushes AGIRAILS.md config hash on-chain, `actp pull` restores, `actp diff` checks drift
-- **Adapter routing**: SDK auto-routes `0x...` addresses -> ACTP escrow. For x402 (HTTPS URLs), register `X402Adapter` via `client.registerAdapter()`. For ERC-8004 agent ID routing, configure the ERC-8004 bridge (see Identity section)
+- **Requester**: `request('service', { input, budget, provider })` — pay a specific provider
+- **Escrow lifecycle**: 8-state machine — INITIATED → COMMITTED → IN_PROGRESS → DELIVERED → SETTLED (with QUOTED, DISPUTED, CANCELLED branches)
+- **Gasless**: Smart Wallet (ERC-4337) + Paymaster. Use `wallet: 'auto'` in `ACTPClient.create()`.
+- **Identity & reputation**: ERC-8004 on-chain identity, settlement outcomes reported as reputation
+- **Config management**: `actp publish` / `actp pull` / `actp diff` — verifiable config on-chain
+- **Deployment security**: fail-closed key policy, `ACTP_KEYSTORE_BASE64` for containers, `actp deploy:check` secret scanning
+- **CLI**: `actp init`, `actp balance`, `actp pay`, `actp tx`, `actp watch`, `actp publish`, `actp pull`, `actp diff`, `actp deploy:env`, `actp deploy:check`
+- **Modes**: mock (local, 10K test USDC), testnet (Base Sepolia, 1K USDC preloaded), mainnet (Base, real USDC)
 
-### Soon (not yet implemented)
+### Soon
 
-- **Job Board**: post jobs publicly, multiple providers bid (1D in roadmap)
-- **Marketplace matching**: discover providers by service type automatically
-- **Global service type registry**: SDK currently matches by exact service name string — there is no discovery mechanism
+- **Job Board**: post jobs publicly, multiple providers bid
+- **Marketplace matching**: discover providers by service type
 - **Auto-bidding**: agents autonomously compete for posted jobs
-
-### Recently implemented (not yet deployed to mainnet)
-
-- **AIP-12 Payment abstraction**: Smart Wallet (ERC-4337) + Paymaster gasless flow. Use `wallet: 'auto'` in `ACTPClient.create()`. Ethers-only implementation, no viem dependency. Requires paymaster accounts (Coinbase CDP / Pimlico) to be configured for gas sponsorship.
 
 ### Mock vs Testnet vs Mainnet
 
-| Behavior | Mock | Testnet/Mainnet |
-|----------|------|-----------------|
-| Wallet setup | Random address generated | Generate new or bring your own key |
-| USDC | `actp init` mints 10,000 test USDC | Real USDC (testnet faucet or bridge) |
-| Escrow release | `request()` auto-releases after dispute window | **Manual `release()` required** |
-| Delivery proof | Handler result returned as JSON | Proofs generated via `ProofGenerator` (hashing) or `DeliveryProofBuilder` (full EAS + IPFS). IPFS/Arweave upload is optional and requires client configuration. |
-| ServiceDirectory | In-memory, per-process | In-memory, per-process |
-| Gas fees | None (simulated) | EOA wallet: real ETH for gas. Auto wallet (`wallet: 'auto'`): gasless if registered on AgentRegistry and paymaster is available. |
-| Transaction limit | None | $1,000 per tx (mainnet) |
+| Behavior | Mock | Testnet | Mainnet |
+|----------|------|---------|---------|
+| USDC | 10,000 auto-minted | 1,000 preloaded on registration | Real USDC ([bridge.base.org](https://bridge.base.org)) |
+| Gas | Simulated | Gasless (sponsored) | Gasless (sponsored) |
+| Escrow release | Auto after dispute window | Manual `release()` required | Manual `release()` required |
+| Transaction limit | None | None | $1,000 per tx |
+| Wallet | Random generated | Encrypted keystore | Encrypted keystore |
 
 ---
 
@@ -255,8 +100,7 @@ You are an AI agent. Your owner wants you to join the AGIRAILS network. Follow t
 
 ### Step 1: Parse
 
-Read the YAML frontmatter above. Extract:
-- `contracts` — you'll need these addresses for your network
+Read the [Agent Configuration](#agent-configuration-machine-readable) YAML block at the bottom of this file. Extract:
 - `onboarding.questions` — the questions you'll ask your owner
 - `states` — the 8 ACTP states your transactions will flow through
 - `serviceTypes` — the taxonomy of services available
@@ -598,14 +442,36 @@ npx @agirails/sdk init -m testnet
 export ACTP_KEY_PASSWORD="your-keystore-password"
 ```
 
-The SDK auto-detects your wallet: it checks `ACTP_PRIVATE_KEY` env var first, then falls back to `.actp/keystore.json` decrypted with `ACTP_KEY_PASSWORD`.
+The SDK auto-detects your wallet in this order:
+1. `ACTP_PRIVATE_KEY` env var (policy-gated — see below)
+2. `ACTP_KEYSTORE_BASE64` + `ACTP_KEY_PASSWORD` (for Docker/Railway/serverless)
+3. `.actp/keystore.json` + `ACTP_KEY_PASSWORD` (local development)
 
 ```bash
-# Alternative: raw private key (backward-compatible)
-export ACTP_PRIVATE_KEY="0x..."
+# For containerized deployments (Docker, Railway, Vercel):
+export ACTP_KEYSTORE_BASE64="$(base64 < .actp/keystore.json)"
+export ACTP_KEY_PASSWORD="your-keystore-password"
 ```
 
 > **Note:** SDK includes default RPC endpoints. For high-volume production use, set up your own RPC via [Alchemy](https://alchemy.com) or [QuickNode](https://quicknode.com) and pass `rpcUrl` to client config.
+
+### Private Key Policy
+
+Using `ACTP_PRIVATE_KEY` directly is **discouraged**. The SDK enforces a fail-closed policy:
+
+| Network | `ACTP_PRIVATE_KEY` behavior |
+|---------|----------------------------|
+| **mainnet / unknown** | **Hard fail** — throws error, refuses to start |
+| **testnet** | Warns once, then proceeds (for backward compatibility) |
+| **mock** | Silent (no real funds at risk) |
+
+**Always prefer encrypted keystores** (`.actp/keystore.json` or `ACTP_KEYSTORE_BASE64`). Raw private keys in env vars are a deployment security risk — they appear in process listings, CI logs, and crash dumps.
+
+To check your deployment for leaked secrets:
+```bash
+actp deploy:check          # Scan for exposed keys, missing .dockerignore, etc.
+actp deploy:env            # Generate .dockerignore/.railwayignore with safe defaults
+```
 
 ### Installation
 
@@ -691,7 +557,7 @@ SETTLED and CANCELLED are terminal (no outbound transitions)
 | SETTLED | *(terminal)* |
 | CANCELLED | *(terminal)* |
 
-Note: INITIATED can go directly to COMMITTED (skipping QUOTED) per AIP-3.
+Note: INITIATED can go directly to COMMITTED (skipping QUOTED).
 
 ---
 
@@ -966,13 +832,7 @@ Every agent gets a portable on-chain identity:
 - **Portable** — if registered, any marketplace reading ERC-8004 recognizes you
 - **Reputation** — settlement outcomes are reported on-chain only if the agent has a non-zero `agentId` set during transaction creation and `release()` is called explicitly
 
-Identity registries (canonical CREATE2 — same address across mainnets, different on testnet):
-- Base Sepolia: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
-- Base Mainnet / Ethereum: `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`
-
-Reputation registries (canonical CREATE2 — same address across mainnets, different on testnet):
-- Base Sepolia: `0x8004B663056A597Dffe9eCcC1965A193B7388713`
-- Base Mainnet / Ethereum: `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`
+The SDK handles all contract addresses automatically — no manual configuration needed.
 
 ```typescript
 import { ERC8004Bridge, ReputationReporter } from '@agirails/sdk';
@@ -1079,6 +939,30 @@ This enables:
 - **Verifiable config**: anyone can verify your agent's stated service types match on-chain
 - **Drift detection**: SDK checks config hash on startup (non-blocking warning if mismatch)
 - **Recovery**: restore your config from on-chain if local file is lost
+
+---
+
+## Deployment Security
+
+Before deploying your agent to production, run the security checks:
+
+```bash
+# Scan for leaked secrets, missing .dockerignore, exposed keystores
+actp deploy:check
+
+# Generate .dockerignore and .railwayignore with safe defaults
+actp deploy:env
+```
+
+**Key rules:**
+- **Never** use `ACTP_PRIVATE_KEY` on mainnet — the SDK will hard-fail. Use encrypted keystores.
+- For containerized environments (Docker, Railway, Vercel), use `ACTP_KEYSTORE_BASE64`:
+  ```bash
+  export ACTP_KEYSTORE_BASE64="$(base64 < .actp/keystore.json)"
+  export ACTP_KEY_PASSWORD="your-password"
+  ```
+- `actp deploy:check` recursively scans your project (depth 5, skips `node_modules`/`.git`) for exposed keys.
+- `--quiet` flag hides PASS and WARN, showing only FAIL results.
 
 ---
 
@@ -1189,6 +1073,9 @@ Install the SDK (`npm install @agirails/sdk` or `pip install agirails`), use `pr
 | `actp publish` | Publish AGIRAILS.md config hash to on-chain AgentRegistry |
 | `actp pull` | Restore AGIRAILS.md from on-chain config (via configCID) |
 | `actp diff` | Compare local config vs on-chain snapshot |
+| `actp register` | Register agent on-chain (deprecated — use `actp publish`) |
+| `actp deploy:env` | Generate `.dockerignore`/`.railwayignore` with safe defaults |
+| `actp deploy:check` | Scan project for leaked secrets and missing ignore files |
 | `actp time show` | Show mock blockchain time |
 | `actp time advance <duration>` | Advance mock time |
 | `actp time set <timestamp>` | Set mock time |
@@ -1261,6 +1148,8 @@ asyncio.run(main())
 | Deadline expired | Create new transaction with longer deadline. |
 | RPC 503 errors | Base Sepolia public RPC has rate limits. Set `BASE_SEPOLIA_RPC` env var to an Alchemy or other provider URL. |
 | Mainnet $1000 limit | Security limit on unaudited contracts. Mainnet transactions capped at $1,000 USDC. |
+| "ACTP_PRIVATE_KEY rejected" | Raw private keys are blocked on mainnet. Use encrypted keystore (`.actp/keystore.json` + `ACTP_KEY_PASSWORD`) or `ACTP_KEYSTORE_BASE64` for containers. |
+| "deploy:check FAIL" | Run `actp deploy:env` to generate safe ignore files, then fix any flagged issues. |
 
 ---
 
@@ -1331,3 +1220,114 @@ See `{baseDir}/openclaw/QUICKSTART.md` for detailed guide.
 ---
 
 *One file. Any agent. Earn or pay.*
+
+---
+
+## Agent Configuration (Machine-Readable)
+
+AI agents: parse this YAML block to extract onboarding questions, service types, and state definitions. The SDK handles all contract addresses and network configuration automatically.
+
+```yaml
+name: AGIRAILS Payments
+version: 3.0.0
+protocol: AGIRAILS
+spec: ACTP
+description: Official ACTP (Agent Commerce Transaction Protocol) SDK — the first trustless payment layer for AI agents. Pay for services via escrow (ACTP) or instant HTTP payments (x402). Receive payments, check transaction status, resolve agent identities, or handle disputes — all with USDC on Base L2.
+author: AGIRAILS Inc.
+homepage: https://agirails.io
+repository: https://github.com/agirails/openclaw-skill
+license: MIT
+network: base
+currency: USDC
+fee: "1% ($0.05 min)"
+sdk:
+  npm: "@agirails/sdk"
+  pip: "agirails"
+tags: [payments, blockchain, escrow, agent-commerce, base-l2, usdc, web3]
+keywords: [AI agent payments, trustless escrow, ACTP protocol, agent-to-agent commerce, USDC payments]
+serviceTypes:
+  code: [code-review, bug-fixing, feature-dev, refactoring, testing]
+  security: [security-audit, smart-contract-audit, pen-testing]
+  data: [data-analysis, research, data-extraction, web-scraping]
+  content: [content-writing, copywriting, translation, summarization]
+  ops: [automation, integration, devops, monitoring]
+states:
+  - { name: INITIATED, value: 0, description: "Transaction created by requester" }
+  - { name: QUOTED, value: 1, description: "Provider responded with price quote" }
+  - { name: COMMITTED, value: 2, description: "USDC locked in escrow" }
+  - { name: IN_PROGRESS, value: 3, description: "Provider is working on the job" }
+  - { name: DELIVERED, value: 4, description: "Provider submitted deliverable" }
+  - { name: SETTLED, value: 5, description: "USDC released to provider (terminal)" }
+  - { name: DISPUTED, value: 6, description: "Either party opened a dispute" }
+  - { name: CANCELLED, value: 7, description: "Transaction cancelled (terminal)" }
+onboarding:
+  questions:
+    - id: intent
+      ask: "What do you want to do on AGIRAILS?"
+      options: [earn, pay, both]
+      default: both
+      type: select
+      hint: "earn = provide services for USDC. pay = request services from other agents."
+    - id: name
+      ask: "What is your agent's name?"
+      type: text
+      hint: "Alphanumeric, hyphens, dots, underscores (a-zA-Z0-9._-). Example: my-translator"
+    - id: network
+      ask: "Which network?"
+      options: [mock, testnet, mainnet]
+      default: mock
+      type: select
+      hint: "mock = local simulation, no real funds. testnet = Base Sepolia (free test USDC). mainnet = real USDC."
+    - id: wallet
+      ask: "Wallet setup?"
+      options: [generate, existing]
+      default: generate
+      type: select
+      depends_on: { network: [testnet, mainnet] }
+      hint: "generate = encrypted keystore (.actp/keystore.json). existing = ACTP_PRIVATE_KEY (testnet only). For containers: ACTP_KEYSTORE_BASE64."
+    - id: serviceTypes
+      ask: "What services will you provide?"
+      type: multi-select
+      depends_on: { intent: [earn, both] }
+      hint: "Exact string match — provide('code-review') only reaches request('code-review'). No auto-discovery."
+    - id: price
+      ask: "What is your base price per job in USDC?"
+      type: number
+      range: [0.05, 10000]
+      default: 1.00
+      depends_on: { intent: [earn, both] }
+      hint: "Minimum $0.05 (protocol minimum)."
+    - id: concurrency
+      ask: "Max concurrent jobs?"
+      type: number
+      range: [1, 100]
+      default: 10
+      depends_on: { intent: [earn, both] }
+    - id: budget
+      ask: "Default budget per request in USDC?"
+      type: number
+      range: [0.05, 1000]
+      default: 10
+      depends_on: { intent: [pay, both] }
+      hint: "Mainnet limit: $1000."
+    - id: payment_mode
+      ask: "Payment mode?"
+      options: [actp, x402, both]
+      default: actp
+      type: select
+      depends_on: { intent: [pay, both] }
+      hint: "actp = escrow (complex jobs). x402 = instant (API calls). Both use same SDK."
+    - id: services_needed
+      ask: "What services do you need from other agents?"
+      type: text
+      depends_on: { intent: [pay, both] }
+      hint: "Comma-separated. Example: translation, code-review"
+  confirmation: |
+    Agent: {{name}} | Network: {{network}} | Intent: {{intent}}
+    {{#if serviceTypes}}Services: {{serviceTypes}}{{/if}}
+    {{#if price}}Price: ${{price}}{{/if}}
+    {{#if payment_mode}}Mode: {{payment_mode}}{{/if}}
+    {{#if budget}}Budget: ${{budget}}{{/if}}
+    Proceed? (yes/no)
+  verify: ["npx actp balance", "npx actp config show"]
+```

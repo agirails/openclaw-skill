@@ -2,6 +2,8 @@
 
 **Give your AI agent a wallet. Let it earn and pay USDC — settled on-chain, gasless, in under 2 seconds.**
 
+> **Quick start**: Tell your agent: *"Read SKILL.md and set up AGIRAILS payments"* — the onboarding flow will guide you interactively.
+
 AGIRAILS is the open settlement layer for AI agents on Base L2. This skill turns any [OpenClaw/Clawdbot](https://openclaw.ai) agent into a full participant in the agent economy — earning, paying, and settling in USDC with on-chain guarantees.
 
 ## Why This Exists
@@ -10,11 +12,12 @@ AI agents need to pay each other. Not with API keys and invoices — with real m
 
 | What you get | How it works |
 |---|---|
-| **Gasless transactions** | Gas sponsored — your agent never needs ETH |
+| **Gasless transactions** | Smart Wallet (ERC-4337) + Paymaster — your agent never needs ETH |
 | **USDC settlement** | Real stablecoin, not tokens. $1 = $1. On Base L2. |
 | **Encrypted wallet** | Auto-generated keystore (AES-128-CTR, chmod 600, gitignored). No keys in code, ever. |
 | **Two payment modes** | ACTP escrow for complex jobs. x402 instant for API calls. Same SDK. |
 | **On-chain identity** | ERC-8004 portable identity + reputation. Follows your agent across marketplaces. |
+| **Deployment security** | Fail-closed key policy, `ACTP_KEYSTORE_BASE64` for containers, `actp deploy:check` secret scanning. |
 | **10,000 test USDC** | `actp init` in mock mode — start building immediately. Testnet: 1,000 USDC minted gaslessly during registration. |
 | **1% transparent fee** | `max(amount * 1%, $0.05)`. Same on both payment paths. No subscriptions. |
 
@@ -61,15 +64,17 @@ Three commands. Mock mode. No keys, no gas, no config.
    pip install agirails        # Python
    ```
 
-2. **Wallet setup** (SDK auto-detects: `ACTP_PRIVATE_KEY` first, then `.actp/keystore.json`):
+2. **Wallet setup** (SDK auto-detects: keystore → `ACTP_KEYSTORE_BASE64` → `ACTP_PRIVATE_KEY`):
    ```bash
    # Option A: Encrypted keystore (recommended)
    npx actp init -m testnet
    export ACTP_KEY_PASSWORD="your-keystore-password"
 
-   # Option B: Raw private key
-   export ACTP_PRIVATE_KEY="0x..."
+   # Option B: For Docker/Railway/serverless
+   export ACTP_KEYSTORE_BASE64="$(base64 < .actp/keystore.json)"
+   export ACTP_KEY_PASSWORD="your-keystore-password"
    ```
+   > **Note:** `ACTP_PRIVATE_KEY` is blocked on mainnet Use encrypted keystores.
 
 ## Networks
 
@@ -78,7 +83,7 @@ Three commands. Mock mode. No keys, no gas, no config.
 | **Cost to start** | Free | Free (1,000 USDC minted during registration) | Real USDC |
 | **Gas** | Simulated | Gas sponsored | Gas sponsored |
 | **USDC** | 10,000 auto-minted | 1,000 minted gaslessly on registration | bridge.base.org |
-| **Escrow** | Auto-releases | Manual `release()` | Manual `release()` |
+| **Escrow** | `request()` auto-releases; `client.pay()` manual | Manual `release()` | Manual `release()` |
 | **Tx limit** | None | None | $1,000 |
 
 ## What's Inside

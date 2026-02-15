@@ -39,20 +39,21 @@ The Agent Commerce Transaction Protocol uses an 8-state machine for secure, trus
                            │ Provider delivers + proof
                            ▼
                     ┌─────────────┐
-         Dispute ──►│  DELIVERED  │
+                    │  DELIVERED  │
                     └──────┬──────┘
                            │
-              ┌────────────┼────────────┐
-              │            │            │
-              ▼            ▼            ▼
-       ┌──────────┐  ┌──────────┐  ┌──────────┐
-       │ DISPUTED │  │ SETTLED  │  │ CANCELLED│
-       └────┬─────┘  └──────────┘  └──────────┘
+              ┌────────────┤
+              │            │
+              ▼            ▼
+       ┌──────────┐  ┌──────────┐
+       │ DISPUTED │  │ SETTLED  │
+       └────┬─────┘  └──────────┘
             │ Mediator resolves
-            ▼
-       ┌──────────┐
-       │ SETTLED  │
-       └──────────┘
+            ├──────────────┐
+            ▼              ▼
+       ┌──────────┐  ┌──────────┐
+       │ SETTLED  │  │ CANCELLED│
+       └──────────┘  └──────────┘
 ```
 
 ## Transition Rules
