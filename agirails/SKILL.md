@@ -17,10 +17,14 @@ optionalEnvVars:
   - BASE_SEPOLIA_RPC (custom testnet RPC endpoint — defaults to public Base Sepolia)
   - BASE_MAINNET_RPC (custom mainnet RPC endpoint — defaults to public Base Mainnet)
   - PROVIDER_ADDRESS (target provider wallet address — used in example scripts only)
+  - MEDIATOR_ADDRESS (dispute mediator address — used in full-lifecycle example only)
+  - IPFS_GATEWAY (IPFS gateway URL — defaults to https://ipfs.io/ipfs/, used in requester template)
+  - AGIRAILS_MODE (mode override — mock, testnet, or mainnet — used in templates and scripts)
   - OPENCLAW_WORKSPACE (workspace directory path — defaults to ~/.openclaw/workspace, used by setup.sh)
 install:
-  - npm install @agirails/sdk
-  - npx actp init -m <network>
+  - npm install @agirails/sdk (TypeScript/Node.js)
+  - pip install agirails (Python alternative)
+  - npx actp init -m <network> (creates keystore and config)
 credentials:
   - ACTP_KEY_PASSWORD (required — decrypts AES-128-CTR encrypted keystore for transaction signing)
   - ACTP_PRIVATE_KEY (optional, testnet only — SDK hard-fails on mainnet, warns once on testnet)
@@ -1414,10 +1418,14 @@ optionalEnvVars:
   - BASE_SEPOLIA_RPC (custom testnet RPC endpoint — defaults to public Base Sepolia)
   - BASE_MAINNET_RPC (custom mainnet RPC endpoint — defaults to public Base Mainnet)
   - PROVIDER_ADDRESS (target provider wallet address — used in example scripts only)
+  - MEDIATOR_ADDRESS (dispute mediator address — used in full-lifecycle example only)
+  - IPFS_GATEWAY (IPFS gateway URL — defaults to https://ipfs.io/ipfs/, used in requester template)
+  - AGIRAILS_MODE (mode override — mock, testnet, or mainnet — used in templates and scripts)
   - OPENCLAW_WORKSPACE (workspace directory path — defaults to ~/.openclaw/workspace, used by setup.sh)
 install:
-  - npm install @agirails/sdk
-  - npx actp init -m <network>
+  - npm install @agirails/sdk (TypeScript/Node.js)
+  - pip install agirails (Python alternative)
+  - npx actp init -m <network> (creates keystore and config)
 credentials:
   - ACTP_KEY_PASSWORD (required — decrypts AES-128-CTR encrypted keystore for transaction signing)
   - ACTP_PRIVATE_KEY (optional, testnet only — SDK hard-fails on mainnet, warns once on testnet)
