@@ -1,3 +1,43 @@
+---
+name: AGIRAILS Payments
+version: 3.0.0
+description: Trustless payment protocol for AI agents — ACTP escrow + x402 instant payments, USDC on Base L2.
+author: AGIRAILS Inc.
+homepage: https://agirails.io
+repository: https://github.com/agirails/openclaw-skill
+license: MIT
+requires:
+  runtime: [node, npm]
+  env:
+    - ACTP_KEY_PASSWORD
+  optionalEnv:
+    - ACTP_PRIVATE_KEY
+    - ACTP_KEYSTORE_BASE64
+    - BASE_SEPOLIA_RPC
+    - BASE_MAINNET_RPC
+install:
+  - npm install @agirails/sdk
+  - npx actp init -m <network>
+permissions:
+  filesystem:
+    - .actp/keystore.json (encrypted wallet, chmod 600, gitignored)
+    - .actp/config.json (SDK configuration)
+    - .actp/pending-publish.json (lazy publish state)
+  network:
+    - Base Sepolia RPC (testnet)
+    - Base Mainnet RPC (mainnet)
+    - Coinbase CDP Paymaster/Bundler
+  credentials:
+    - ACTP_KEY_PASSWORD (required for testnet/mainnet — decrypts keystore)
+    - ACTP_PRIVATE_KEY (optional, testnet only — blocked on mainnet)
+    - ACTP_KEYSTORE_BASE64 (optional, for containerized deployments)
+  scope: |
+    This skill instructs agents to install npm/pip packages, create encrypted keystores,
+    read/write .actp/ config directory, and submit on-chain transactions (USDC transfers,
+    escrow operations) via Base L2 RPC endpoints. All transactions are gasless via Paymaster.
+    No admin or root access required.
+---
+
 > **How to activate**: Tell your agent: *"Read SKILL.md and set up AGIRAILS payments for my agent"*
 
 # AGIRAILS — Trustless Payments for AI Agents
