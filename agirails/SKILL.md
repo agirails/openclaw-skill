@@ -1403,4 +1403,42 @@ onboarding:
     {{#if budget}}Budget: ${{budget}}{{/if}}
     Proceed? (yes/no)
   verify: ["npx actp balance", "npx actp config show"]
+requiredBinaries:
+  - node (>=18)
+  - npm
+requiredEnvVars:
+  - ACTP_KEY_PASSWORD (decrypts encrypted keystore — required for testnet and mainnet)
+optionalEnvVars:
+  - ACTP_PRIVATE_KEY (raw private key — testnet only, blocked on mainnet by SDK fail-closed policy)
+  - ACTP_KEYSTORE_BASE64 (base64-encoded keystore — for Docker/Railway/serverless deployments)
+  - BASE_SEPOLIA_RPC (custom testnet RPC endpoint — defaults to public Base Sepolia)
+  - BASE_MAINNET_RPC (custom mainnet RPC endpoint — defaults to public Base Mainnet)
+  - PROVIDER_ADDRESS (target provider wallet address — used in example scripts only)
+  - OPENCLAW_WORKSPACE (workspace directory path — defaults to ~/.openclaw/workspace, used by setup.sh)
+install:
+  - npm install @agirails/sdk
+  - npx actp init -m <network>
+credentials:
+  - ACTP_KEY_PASSWORD (required — decrypts AES-128-CTR encrypted keystore for transaction signing)
+  - ACTP_PRIVATE_KEY (optional, testnet only — SDK hard-fails on mainnet, warns once on testnet)
+  - ACTP_KEYSTORE_BASE64 (optional — base64-encoded keystore for containerized/serverless deployments)
+filesystemWrites:
+  - .actp/keystore.json (encrypted wallet — AES-128-CTR, chmod 600, auto-gitignored)
+  - .actp/config.json (SDK configuration — mode, network, contract addresses)
+  - .actp/pending-publish.json (lazy publish state for deferred mainnet registration)
+  - ~/.openclaw/workspace/ (setup.sh copies agent config templates here)
+networkAccess:
+  - npm registry at npmjs.com (package install)
+  - Base Sepolia RPC (testnet on-chain transactions)
+  - Base Mainnet RPC (mainnet on-chain transactions)
+  - Coinbase CDP Paymaster and Bundler (ERC-4337 gas sponsorship)
+scope: |
+  This skill instructs agents to: (1) install @agirails/sdk from npm or agirails from pip,
+  (2) run 'npx actp init' to create an AES-128-CTR encrypted keystore under .actp/ (chmod 600, gitignored),
+  (3) read/write .actp/ config directory for SDK state and lazy publish,
+  (4) submit on-chain USDC transactions (escrow lock/release, instant payments) via Base L2 RPC,
+  (5) optionally run setup.sh to copy agent templates into the OpenClaw workspace directory.
+  All on-chain transactions are gasless via Coinbase Paymaster (ERC-4337).
+  Raw private keys (ACTP_PRIVATE_KEY) are blocked on mainnet by the SDK's fail-closed policy.
+  No admin, root, or system-wide access required. No other skills or settings are modified.
 ```
