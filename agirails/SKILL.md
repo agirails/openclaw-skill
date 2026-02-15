@@ -43,10 +43,15 @@ const { ACTPClient } = require('@agirails/sdk');
 
 async function main() {
   const client = await ACTPClient.create({ mode: 'mock' });
-  await client.mintTokens(client.getAddress(), '10000000000'); // 10,000 USDC
+
+  // Mint test USDC (mock only — testnet auto-mints 1,000 during actp init)
+  // USDC has 6 decimals: 10000 * 10^6 = 10000000000
+  await client.mintTokens(client.getAddress(), '10000000000');
+
+  // pay() amounts are human-readable strings (not raw units)
   const result = await client.pay({
     to: '0x0000000000000000000000000000000000000001',
-    amount: '5.00', // 5 USDC (human-readable, not wei)
+    amount: '5.00',
   });
   console.log('Payment:', result.txId, '| State:', result.state);
   console.log('Escrow:', result.escrowId, '| Release required:', result.releaseRequired);
@@ -54,6 +59,8 @@ async function main() {
 
 main().catch(console.error);
 ```
+
+> **Amount formats**: `pay()`, `request()`, `budget` — always human-readable strings (`'5.00'` = 5 USDC). `mintTokens()` uses raw units (USDC has 6 decimals, so 1 USDC = `'1000000'`).
 
 **Already set up?** Just say: *"Pay 10 USDC to 0xProvider for translation service"*
 
@@ -142,7 +149,10 @@ Or for Python:
 pip install agirails
 ```
 
-> **Note on `mode` vs `network`:** `ACTPClient.create()` uses the `mode` parameter. `Agent()` and `provide()` use the `network` parameter. Both accept the same values: `mock`, `testnet`, `mainnet`.
+> **`mode` vs `network` — same values, different parameter names:**
+> - `ACTPClient.create({ mode: 'mock' })` — low-level client uses `mode`
+> - `new Agent({ network: 'mock' })`, `provide('svc', fn, { network: 'mock' })` — high-level APIs use `network`
+> - Both accept: `'mock'`, `'testnet'`, `'mainnet'`
 
 ### Step 4: Write Code
 
@@ -150,7 +160,7 @@ pip install agirails
 
 All generated code MUST follow these rules:
 - Wrap in `async function main() { ... } main().catch(console.error);` (SDK is CommonJS, no top-level await)
-- `ACTPClient.create()` uses `mode` parameter; `Agent()`, `provide()`, `request()` use `network` — same values, different names
+- See `mode` vs `network` note above — use the correct parameter name for each API
 - Testnet/mainnet requesters: release escrow after verifying delivery (mock auto-releases, real networks do NOT)
 
 Based on the owner's answers, generate the appropriate code.
@@ -244,20 +254,26 @@ main().catch(console.error);
 
 **If payment_mode = "x402"** (instant HTTP payment, no escrow):
 
+> x402 requires a real HTTP endpoint that returns `402 Payment Required`. It works on **testnet and mainnet** — in mock mode, use ACTP for everything.
+
 ```typescript
 import { ACTPClient, X402Adapter } from '@agirails/sdk';
+import { ethers } from 'ethers';
 
 async function main() {
   const client = await ACTPClient.create({
-    mode: '{{network}}',  // auto-detects .actp/keystore.json or ACTP_PRIVATE_KEY
+    mode: '{{network}}',  // 'testnet' or 'mainnet' (x402 needs real endpoints)
   });
 
   // Register x402 adapter (not registered by default)
+  // The SDK provides the signer from your keystore — get it from the wallet provider
+  const signer = client.getSigner(); // ethers.Wallet from your keystore
+  const usdcAddress = client.getUSDCAddress(); // SDK knows the correct address per network
+
   client.registerAdapter(new X402Adapter(client.getAddress(), {
     expectedNetwork: 'base-sepolia', // or 'base-mainnet'
-    // Provide your own USDC transfer function (signer = your ethers.Wallet)
     transferFn: async (to, amount) => {
-      const usdc = new ethers.Contract(USDC_ADDRESS, ['function transfer(address,uint256) returns (bool)'], signer);
+      const usdc = new ethers.Contract(usdcAddress, ['function transfer(address,uint256) returns (bool)'], signer);
       return (await usdc.transfer(to, amount)).hash;
     },
   }));
@@ -316,7 +332,7 @@ main().catch(console.error);
 
 #### If intent = "both"
 
-Combine the patterns above. An Agent can both `provide()` services and `request()` services:
+An Agent can both `provide()` services and `request()` services in the same process:
 
 ```typescript
 import { Agent } from '@agirails/sdk';
@@ -328,25 +344,36 @@ async function main() {
     behavior: { concurrency: {{concurrency}} },
   });
 
-  // Provide a service
+  // EARN: Provide a service
   agent.provide('{{serviceTypes[0]}}', async (job, ctx) => {
+    ctx.progress(50, 'Working...');
     // TODO: Replace with your actual service logic
-    // If you need another agent's help to complete the job:
-    const sub = await agent.request('helper-service', {
-      input: job.input,
-      budget: job.budget * 0.5,
-    });
-    // On testnet/mainnet, release escrow for the inner request:
-    // await client.standard.releaseEscrow(sub.transaction.id);
-    return sub.result;
+    const result = `Processed: ${JSON.stringify(job.input)}`;
+    return result;
+  });
+
+  agent.on('payment:received', (amount) => {
+    console.log(`Earned ${amount} USDC`);
   });
 
   await agent.start();
   console.log(`Agent running at ${agent.address}`);
+
+  // PAY: Request a service from another agent (ACTP escrow)
+  const { result, transaction } = await agent.request('{{services_needed}}', {
+    input: { text: 'Hello world' },
+    budget: {{budget}},
+  });
+  console.log(result);
+  // IMPORTANT: On testnet/mainnet, release escrow after verifying delivery:
+  // const client = await ACTPClient.create({ mode: '{{network}}' });
+  // await client.standard.releaseEscrow(transaction.id);
 }
 
 main().catch(console.error);
 ```
+
+> **Adding x402 to this agent**: x402 is for paying HTTPS endpoints (testnet/mainnet only). See the [x402 template above](#if-payment_mode--x402-instant-http-payment-no-escrow) and add `client.registerAdapter(new X402Adapter(...))` to your setup. Mock mode doesn't need x402 — use ACTP for everything.
 
 ### Step 5: Verify
 
@@ -370,10 +397,11 @@ Show the owner:
 Run your agent code:
 
 ```bash
-npx ts-node agent.ts
+node agent.js          # JavaScript
+npx ts-node agent.ts   # TypeScript
 ```
 
-In mock mode, everything runs locally with simulated USDC. The `actp` CLI is for inspection and manual operations (balance, tx status) — your agent is your code. Switch to `testnet` when ready to test on-chain, then `mainnet` for production.
+In mock mode, everything runs locally with simulated USDC. The `actp` CLI is for inspection and manual operations (balance, tx status) — your agent code is what runs. Switch to `testnet` when ready to test on-chain, then `mainnet` for production.
 
 ---
 
