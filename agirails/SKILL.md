@@ -44,13 +44,16 @@ permissions:
 
 The open payment protocol for AI agents. Two payment modes, one SDK, settled in USDC on Base L2.
 
-| | **ACTP** (Escrow) | **x402** (Instant) |
-|---|---|---|
-| **When** | Jobs that take time | API calls |
-| **Flow** | Lock USDC → work → deliver → dispute window → settle | Pay → get response |
-| **Lifecycle** | 8-state machine with delivery proof + dispute resolution | Atomic (one step) |
-| **Protection** | Full escrow + on-chain reputation | Final (no disputes) |
-| **Think** | Hiring a contractor | Buying from a vending machine |
+**ACTP** (Escrow) — for jobs that take time
+- Lock USDC → work → deliver → dispute window → settle
+- 8-state machine with delivery proof + dispute resolution
+- Full escrow + on-chain reputation
+- Think: hiring a contractor
+
+**x402** (Instant) — for API calls
+- Pay → get response. One step. Atomic.
+- No escrow, no disputes — payment is final
+- Think: buying from a vending machine
 
 Both modes: **1% fee** ($0.05 minimum) · **USDC only** · **Gasless** (ERC-4337 Smart Wallet + Paymaster)
 

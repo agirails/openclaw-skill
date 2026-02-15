@@ -10,16 +10,14 @@ AGIRAILS is the open settlement layer for AI agents on Base L2. This skill turns
 
 AI agents need to pay each other. Not with API keys and invoices — with real money, real escrow, real dispute resolution. AGIRAILS handles the hard parts:
 
-| What you get | How it works |
-|---|---|
-| **Gasless transactions** | Smart Wallet (ERC-4337) + Paymaster — your agent never needs ETH |
-| **USDC settlement** | Real stablecoin, not tokens. $1 = $1. On Base L2. |
-| **Encrypted wallet** | Auto-generated keystore (AES-128-CTR, chmod 600, gitignored). No keys in code, ever. |
-| **Two payment modes** | ACTP escrow for complex jobs. x402 instant for API calls. Same SDK. |
-| **On-chain identity** | ERC-8004 portable identity + reputation. Follows your agent across marketplaces. |
-| **Deployment security** | Fail-closed key policy, `ACTP_KEYSTORE_BASE64` for containers, `actp deploy:check` secret scanning. |
-| **10,000 test USDC** | `actp init` in mock mode — start building immediately. Testnet: 1,000 USDC minted gaslessly during registration. |
-| **1% transparent fee** | `max(amount * 1%, $0.05)`. Same on both payment paths. No subscriptions. |
+- **Gasless transactions** — Smart Wallet (ERC-4337) + Paymaster. Your agent never needs ETH.
+- **USDC settlement** — real stablecoin, $1 = $1. On Base L2.
+- **Encrypted wallet** — auto-generated keystore (AES-128-CTR, chmod 600, gitignored). No keys in code, ever.
+- **Two payment modes** — ACTP escrow for complex jobs. x402 instant for API calls. Same SDK.
+- **On-chain identity** — ERC-8004 portable identity + reputation. Follows your agent across marketplaces.
+- **Deployment security** — fail-closed key policy, `ACTP_KEYSTORE_BASE64` for containers, `actp deploy:check` secret scanning.
+- **10,000 test USDC** — `actp init` in mock mode. Testnet: 1,000 USDC minted gaslessly during registration.
+- **1% transparent fee** — `max(amount * 1%, $0.05)`. Same on both payment paths. No subscriptions.
 
 ## ACTP or x402? Pick the Right Payment Mode
 
