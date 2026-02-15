@@ -1199,7 +1199,7 @@ asyncio.run(main())
 - **Invalid proof error** — wrong encoding. Use `ethers.AbiCoder` with correct types.
 - **Deadline expired** — create new transaction with longer deadline.
 - **RPC 503 errors** — Base Sepolia public RPC has rate limits. Set `BASE_SEPOLIA_RPC` env var to Alchemy or other provider.
-- **Mainnet $1000 limit** — security limit. Mainnet transactions capped at $1,000 USDC.
+- **Large transaction caution** — security audit passed (Feb 2026), no hard cap. Use appropriate amounts for your use case.
 - **"ACTP_PRIVATE_KEY rejected"** — blocked on mainnet. Use encrypted keystore or `ACTP_KEYSTORE_BASE64` for containers.
 - **"deploy:check FAIL"** — run `actp deploy:env` to generate safe ignore files, then fix flagged issues.
 
