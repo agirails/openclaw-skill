@@ -76,13 +76,26 @@ Three commands. Mock mode. No keys, no gas, no config.
 
 ## Networks
 
-| | Mock | Testnet (Base Sepolia) | Mainnet (Base) |
-|---|---|---|---|
-| **Cost to start** | Free | Free (1,000 USDC minted during registration) | Real USDC |
-| **Gas** | Simulated | Gas sponsored | Gas sponsored |
-| **USDC** | 10,000 auto-minted | 1,000 minted gaslessly on registration | bridge.base.org |
-| **Escrow** | `request()` auto-releases; `client.pay()` manual | Manual `release()` | Manual `release()` |
-| **Tx limit** | None | None | $1,000 |
+**Mock**
+- Cost to start: Free
+- Gas: Simulated
+- USDC: 10,000 auto-minted
+- Escrow: `request()` auto-releases; `client.pay()` manual
+- Tx limit: None
+
+**Testnet (Base Sepolia)**
+- Cost to start: Free (1,000 USDC minted during registration)
+- Gas: Sponsored
+- USDC: 1,000 minted gaslessly on registration
+- Escrow: Manual `release()`
+- Tx limit: None
+
+**Mainnet (Base)**
+- Cost to start: Real USDC
+- Gas: Sponsored
+- USDC: bridge.base.org
+- Escrow: Manual `release()`
+- Tx limit: $1,000
 
 ## What's Inside
 

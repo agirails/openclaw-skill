@@ -135,13 +135,26 @@ main().catch(console.error);
 
 ### Mock vs Testnet vs Mainnet
 
-| Behavior | Mock | Testnet | Mainnet |
-|----------|------|---------|---------|
-| USDC | 10,000 auto-minted | 1,000 preloaded on registration | Real USDC ([bridge.base.org](https://bridge.base.org)) |
-| Gas | Simulated | Gasless (sponsored) | Gasless (sponsored) |
-| Escrow release | Auto after dispute window | Manual `release()` required | Manual `release()` required |
-| Transaction limit | None | None | $1,000 per tx |
-| Wallet | Random generated | Encrypted keystore | Encrypted keystore |
+**Mock** (local simulation)
+- USDC: 10,000 auto-minted
+- Gas: simulated
+- Escrow: auto-releases after dispute window
+- Tx limit: none
+- Wallet: random generated
+
+**Testnet** (Base Sepolia)
+- USDC: 1,000 preloaded on registration
+- Gas: gasless (sponsored)
+- Escrow: manual `release()` required
+- Tx limit: none
+- Wallet: encrypted keystore
+
+**Mainnet** (Base)
+- USDC: real ([bridge.base.org](https://bridge.base.org))
+- Gas: gasless (sponsored)
+- Escrow: manual `release()` required
+- Tx limit: $1,000 per tx
+- Wallet: encrypted keystore
 
 ---
 
@@ -337,13 +350,19 @@ main().catch(console.error);
 
 > **ACTP vs x402 — when to use which?**
 >
-> | | ACTP (escrow) | x402 (instant) |
-> |---|---|---|
-> | **Use for** | Complex jobs — code review, audits, translations, anything with deliverables | Simple API calls — lookups, queries, one-shot requests |
-> | **Payment flow** | Lock USDC -> work -> deliver -> dispute window -> settle | Pay -> get response (atomic, one step) |
-> | **Dispute protection** | Yes — 48h window, on-chain evidence | No — payment is final |
-> | **Escrow** | Yes — funds locked until delivery | No — instant settlement |
-> | **Analogy** | Hiring a contractor | Buying from a vending machine |
+> **ACTP (escrow)** — for complex jobs
+> - Use for: code review, audits, translations, anything with deliverables
+> - Flow: Lock USDC -> work -> deliver -> dispute window -> settle
+> - Dispute protection: Yes — 48h window, on-chain evidence
+> - Escrow: Yes — funds locked until delivery
+> - Think: hiring a contractor
+>
+> **x402 (instant)** — for API calls
+> - Use for: lookups, queries, one-shot requests
+> - Flow: Pay -> get response (atomic, one step)
+> - Dispute protection: No — payment is final
+> - Escrow: No — instant settlement
+> - Think: buying from a vending machine
 >
 > Rule of thumb: if the provider needs time to do work -> ACTP. If it's a synchronous HTTP call -> x402.
 
@@ -498,11 +517,9 @@ const { result } = await request('code-review', {
 
 ## Prerequisites
 
-| Requirement | Check | Install |
-|-------------|-------|---------|
-| **Node.js 18+** | `node --version` | [nodejs.org](https://nodejs.org) |
-| **ACTP Keystore** | `ls .actp/keystore.json` | `npx @agirails/sdk init -m testnet` |
-| **USDC Balance** | Check wallet | Bridge USDC to Base via [bridge.base.org](https://bridge.base.org) |
+- **Node.js 18+** — check: `node --version` — install: [nodejs.org](https://nodejs.org)
+- **ACTP Keystore** — check: `ls .actp/keystore.json` — install: `npx @agirails/sdk init -m testnet`
+- **USDC Balance** — check wallet — bridge USDC to Base via [bridge.base.org](https://bridge.base.org)
 
 ### Wallet Setup
 
@@ -531,11 +548,9 @@ export ACTP_KEY_PASSWORD="your-keystore-password"
 
 Using `ACTP_PRIVATE_KEY` directly is **discouraged**. The SDK enforces a fail-closed policy:
 
-| Network | `ACTP_PRIVATE_KEY` behavior |
-|---------|----------------------------|
-| **mainnet / unknown** | **Hard fail** — throws error, refuses to start |
-| **testnet** | Warns once, then proceeds (for backward compatibility) |
-| **mock** | Silent (no real funds at risk) |
+- **mainnet / unknown** — **hard fail** (throws error, refuses to start)
+- **testnet** — warns once, then proceeds (backward compatibility)
+- **mock** — silent (no real funds at risk)
 
 **Always prefer encrypted keystores** (`.actp/keystore.json` or `ACTP_KEYSTORE_BASE64`). Raw private keys in env vars are a deployment security risk — they appear in process listings, CI logs, and crash dumps.
 
@@ -592,12 +607,10 @@ Both sides can open a `DISPUTED (6)` state after delivery. Either party can `CAN
 
 ### Key Guarantees
 
-| Guarantee | Description |
-|-----------|-------------|
-| **Escrow Solvency** | Vault always holds >= active transaction amounts |
-| **State Monotonicity** | States only move forward, never backwards |
-| **Deadline Enforcement** | No delivery after deadline passes |
-| **Dispute Protection** | 48h window to raise issues before settlement |
+- **Escrow Solvency** — vault always holds >= active transaction amounts
+- **State Monotonicity** — states only move forward, never backwards
+- **Deadline Enforcement** — no delivery after deadline passes
+- **Dispute Protection** — 48h window to raise issues before settlement
 
 ---
 
@@ -618,16 +631,14 @@ SETTLED and CANCELLED are terminal (no outbound transitions)
 
 **Valid transitions** (from `state.ts`):
 
-| From | To |
-|------|-----|
-| INITIATED | QUOTED, COMMITTED, CANCELLED |
-| QUOTED | COMMITTED, CANCELLED |
-| COMMITTED | IN_PROGRESS, CANCELLED |
-| IN_PROGRESS | DELIVERED, CANCELLED |
-| DELIVERED | SETTLED, DISPUTED |
-| DISPUTED | SETTLED, CANCELLED |
-| SETTLED | *(terminal)* |
-| CANCELLED | *(terminal)* |
+- **INITIATED** → QUOTED, COMMITTED, CANCELLED
+- **QUOTED** → COMMITTED, CANCELLED
+- **COMMITTED** → IN_PROGRESS, CANCELLED
+- **IN_PROGRESS** → DELIVERED, CANCELLED
+- **DELIVERED** → SETTLED, DISPUTED
+- **DISPUTED** → SETTLED, CANCELLED
+- **SETTLED** → *(terminal)*
+- **CANCELLED** → *(terminal)*
 
 Note: INITIATED can go directly to COMMITTED (skipping QUOTED).
 
@@ -693,15 +704,13 @@ There are no predefined "competitive/market/premium" strategies. You set your co
 
 ## Actions
 
-| Action | Who | Description |
-|--------|-----|-------------|
-| `pay` | Requester | Simple payment (create + escrow lock) |
-| `checkStatus` | Anyone | Get transaction state |
-| `createTransaction` | Requester | Create with custom params |
-| `linkEscrow` | Requester | Lock funds in escrow |
-| `transitionState` | Provider | Quote, start, deliver |
-| `releaseEscrow` | Requester | Release funds to provider |
-| `transitionState('DISPUTED')` | Either | Raise dispute for mediation |
+- `pay` (Requester) — simple payment (create + escrow lock)
+- `checkStatus` (Anyone) — get transaction state
+- `createTransaction` (Requester) — create with custom params
+- `linkEscrow` (Requester) — lock funds in escrow
+- `transitionState` (Provider) — quote, start, deliver
+- `releaseEscrow` (Requester) — release funds to provider
+- `transitionState('DISPUTED')` (Either) — raise dispute for mediation
 
 ---
 
@@ -814,11 +823,9 @@ await client.standard.transitionState(txId, 'DELIVERED', deliveryProof);
 
 All proofs must be ABI-encoded hex strings:
 
-| Transition | Proof Format | Example |
-|------------|--------------|---------|
-| QUOTED | `['uint256']` amount | `encode(['uint256'], [parseUnits('50', 6)])` |
-| DELIVERED | `['uint256']` dispute window | `encode(['uint256'], [172800])` |
-| SETTLED (dispute) | `['uint256', 'uint256', 'address', 'uint256']` | `[reqAmt, provAmt, mediator, fee]` |
+- **QUOTED** — `['uint256']` amount — `encode(['uint256'], [parseUnits('50', 6)])`
+- **DELIVERED** — `['uint256']` dispute window — `encode(['uint256'], [172800])`
+- **SETTLED** (dispute) — `['uint256', 'uint256', 'address', 'uint256']` — `[reqAmt, provAmt, mediator, fee]`
 
 ```typescript
 import { ethers } from 'ethers';
@@ -875,11 +882,9 @@ await client.standard.transitionState(txId, 'SETTLED', resolution);
 
 ## Client Modes
 
-| Mode | Network | Use Case |
-|------|---------|----------|
-| `mock` | Local simulation | Development, testing |
-| `testnet` | Base Sepolia | Integration testing |
-| `mainnet` | Base | Production |
+- `mock` — local simulation (development, testing)
+- `testnet` — Base Sepolia (integration testing)
+- `mainnet` — Base (production)
 
 ```typescript
 // Development
@@ -929,11 +934,9 @@ await reporter.reportSettlement({
 
 The SDK uses an adapter router. By default, only ACTP adapters (basic + standard) are registered. Other adapters require explicit registration:
 
-| `to` value | Adapter | Registration |
-|------------|---------|--------------|
-| `0x1234...` (Ethereum address) | ACTP (basic/standard) | Registered by default |
-| `https://api.example.com/...` | x402 | **Must register** `X402Adapter` via `client.registerAdapter()` |
-| `agent-name` or agent ID | ERC-8004 | **Must configure** ERC-8004 bridge |
+- `0x1234...` (Ethereum address) → **ACTP** (basic/standard) — registered by default
+- `https://api.example.com/...` → **x402** — must register `X402Adapter` via `client.registerAdapter()`
+- `agent-name` or agent ID → **ERC-8004** — must configure ERC-8004 bridge
 
 ```typescript
 // ACTP — works out of the box (default adapters)
@@ -1122,35 +1125,33 @@ Install the SDK (`npm install @agirails/sdk` or `pip install agirails`), use `pr
 
 ## CLI Reference
 
-| Command | Description |
-|---------|-------------|
-| `actp init` | Initialize ACTP in current directory |
-| `actp init --scaffold` | Generate starter agent.ts (use --intent earn/pay/both) |
-| `actp pay <to> <amount>` | Create a payment transaction |
-| `actp balance [address]` | Check USDC balance |
-| `actp tx create` | Create transaction (advanced) |
-| `actp tx status <txId>` | Check transaction state |
-| `actp tx list` | List all transactions |
-| `actp tx deliver <txId>` | Mark transaction as delivered |
-| `actp tx settle <txId>` | Release escrow funds |
-| `actp tx cancel <txId>` | Cancel a transaction |
-| `actp watch <txId>` | Watch transaction state changes |
-| `actp simulate pay` | Dry-run a payment |
-| `actp simulate fee <amount>` | Calculate fee for amount |
-| `actp batch [file]` | Execute batch commands from file |
-| `actp mint <address> <amount>` | Mint test USDC (mock only) |
-| `actp config show` | View current configuration |
-| `actp config set <key> <value>` | Set configuration value |
-| `actp config get <key>` | Get configuration value |
-| `actp publish` | Publish AGIRAILS.md config hash to on-chain AgentRegistry |
-| `actp pull` | Restore AGIRAILS.md from on-chain config (via configCID) |
-| `actp diff` | Compare local config vs on-chain snapshot |
-| `actp register` | Register agent on-chain (deprecated — use `actp publish`) |
-| `actp deploy:env` | Generate `.dockerignore`/`.railwayignore` with safe defaults |
-| `actp deploy:check` | Scan project for leaked secrets and missing ignore files |
-| `actp time show` | Show mock blockchain time |
-| `actp time advance <duration>` | Advance mock time |
-| `actp time set <timestamp>` | Set mock time |
+- `actp init` — initialize ACTP in current directory
+- `actp init --scaffold` — generate starter agent.ts (use `--intent earn/pay/both`)
+- `actp pay <to> <amount>` — create a payment transaction
+- `actp balance [address]` — check USDC balance
+- `actp tx create` — create transaction (advanced)
+- `actp tx status <txId>` — check transaction state
+- `actp tx list` — list all transactions
+- `actp tx deliver <txId>` — mark transaction as delivered
+- `actp tx settle <txId>` — release escrow funds
+- `actp tx cancel <txId>` — cancel a transaction
+- `actp watch <txId>` — watch transaction state changes
+- `actp simulate pay` — dry-run a payment
+- `actp simulate fee <amount>` — calculate fee for amount
+- `actp batch [file]` — execute batch commands from file
+- `actp mint <address> <amount>` — mint test USDC (mock only)
+- `actp config show` — view current configuration
+- `actp config set <key> <value>` — set configuration value
+- `actp config get <key>` — get configuration value
+- `actp publish` — publish AGIRAILS.md config hash to on-chain AgentRegistry
+- `actp pull` — restore AGIRAILS.md from on-chain config (via configCID)
+- `actp diff` — compare local config vs on-chain snapshot
+- `actp register` — register agent on-chain (deprecated — use `actp publish`)
+- `actp deploy:env` — generate `.dockerignore`/`.railwayignore` with safe defaults
+- `actp deploy:check` — scan project for leaked secrets and missing ignore files
+- `actp time show` — show mock blockchain time
+- `actp time advance <duration>` — advance mock time
+- `actp time set <timestamp>` — set mock time
 
 All commands support `--json` for machine-readable output and `-q`/`--quiet` for minimal output.
 
@@ -1206,34 +1207,30 @@ asyncio.run(main())
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| "Insufficient balance" | Mock mode: `actp mint <address> 10000`. Testnet: get test USDC from a faucet. Mainnet: bridge USDC to Base via bridge.base.org. |
-| "ACTP already initialized" | Use `actp init --force` to reinitialize. |
-| "Invalid mode" | Valid modes: `mock`, `testnet`, `mainnet`. |
-| "Address required for testnet" | Run `actp init -m testnet` to generate a keystore, or set `ACTP_PRIVATE_KEY` env var. |
-| "Unknown network" | SDK supports `base-sepolia` (testnet) and `base-mainnet` (mainnet). |
-| Transaction stuck in INITIATED | No provider registered for that service name. Ensure a provider is running with `provide('exact-service-name', handler)` on the same network. |
-| "Invalid state transition" | Check the state machine table above. States can only move forward, never backward. |
-| `COMMITTED -> DELIVERED` reverts | Missing IN_PROGRESS. Add `transitionState(txId, 'IN_PROGRESS')` first. |
-| Invalid proof error | Wrong encoding. Use `ethers.AbiCoder` with correct types. |
-| Deadline expired | Create new transaction with longer deadline. |
-| RPC 503 errors | Base Sepolia public RPC has rate limits. Set `BASE_SEPOLIA_RPC` env var to an Alchemy or other provider URL. |
-| Mainnet $1000 limit | Security limit on unaudited contracts. Mainnet transactions capped at $1,000 USDC. |
-| "ACTP_PRIVATE_KEY rejected" | Raw private keys are blocked on mainnet. Use encrypted keystore (`.actp/keystore.json` + `ACTP_KEY_PASSWORD`) or `ACTP_KEYSTORE_BASE64` for containers. |
-| "deploy:check FAIL" | Run `actp deploy:env` to generate safe ignore files, then fix any flagged issues. |
+- **"Insufficient balance"** — Mock: `actp mint <address> 10000`. Testnet: faucet. Mainnet: bridge USDC via bridge.base.org.
+- **"ACTP already initialized"** — use `actp init --force` to reinitialize.
+- **"Invalid mode"** — valid modes: `mock`, `testnet`, `mainnet`.
+- **"Address required for testnet"** — run `actp init -m testnet` to generate a keystore, or set `ACTP_PRIVATE_KEY`.
+- **"Unknown network"** — SDK supports `base-sepolia` (testnet) and `base-mainnet` (mainnet).
+- **Transaction stuck in INITIATED** — no provider registered for that service name. Ensure a provider is running with `provide('exact-service-name', handler)` on the same network.
+- **"Invalid state transition"** — states only move forward, never backward. Check the state machine above.
+- **`COMMITTED -> DELIVERED` reverts** — missing IN_PROGRESS. Add `transitionState(txId, 'IN_PROGRESS')` first.
+- **Invalid proof error** — wrong encoding. Use `ethers.AbiCoder` with correct types.
+- **Deadline expired** — create new transaction with longer deadline.
+- **RPC 503 errors** — Base Sepolia public RPC has rate limits. Set `BASE_SEPOLIA_RPC` env var to Alchemy or other provider.
+- **Mainnet $1000 limit** — security limit. Mainnet transactions capped at $1,000 USDC.
+- **"ACTP_PRIVATE_KEY rejected"** — blocked on mainnet. Use encrypted keystore or `ACTP_KEYSTORE_BASE64` for containers.
+- **"deploy:check FAIL"** — run `actp deploy:env` to generate safe ignore files, then fix flagged issues.
 
 ---
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `{baseDir}/references/requester-template.md` | Full requester agent template |
-| `{baseDir}/references/provider-template.md` | Full provider agent template |
-| `{baseDir}/references/state-machine.md` | Detailed state transitions |
-| `{baseDir}/examples/simple-payment.md` | All 3 API levels explained |
-| `{baseDir}/examples/full-lifecycle.md` | Complete transaction lifecycle |
+- **`{baseDir}/references/requester-template.md`** — Full requester agent template
+- **`{baseDir}/references/provider-template.md`** — Full provider agent template
+- **`{baseDir}/references/state-machine.md`** — Detailed state transitions
+- **`{baseDir}/examples/simple-payment.md`** — All 3 API levels explained
+- **`{baseDir}/examples/full-lifecycle.md`** — Complete transaction lifecycle
 
 ---
 
@@ -1256,24 +1253,20 @@ See `{baseDir}/openclaw/QUICKSTART.md` for detailed guide.
 
 ### OpenClaw Files
 
-| File | Purpose |
-|------|---------|
-| `{baseDir}/openclaw/QUICKSTART.md` | 5-minute setup guide |
-| `{baseDir}/openclaw/agent-config.json` | Ready-to-use agent configs |
-| `{baseDir}/openclaw/SOUL-treasury.md` | Treasury agent template (buyer) |
-| `{baseDir}/openclaw/SOUL-provider.md` | Merchant agent template (seller) |
-| `{baseDir}/openclaw/SOUL-agent.md` | Full autonomous agent (earn + pay + x402) |
-| `{baseDir}/openclaw/cron-examples.json` | Automation cron jobs |
-| `{baseDir}/openclaw/validation-patterns.md` | Delivery validation helpers |
-| `{baseDir}/openclaw/security-checklist.md` | Pre-launch security audit |
+- **`{baseDir}/openclaw/QUICKSTART.md`** — 5-minute setup guide
+- **`{baseDir}/openclaw/agent-config.json`** — Ready-to-use agent configs
+- **`{baseDir}/openclaw/SOUL-treasury.md`** — Treasury agent template (buyer)
+- **`{baseDir}/openclaw/SOUL-provider.md`** — Merchant agent template (seller)
+- **`{baseDir}/openclaw/SOUL-agent.md`** — Full autonomous agent (earn + pay + x402)
+- **`{baseDir}/openclaw/cron-examples.json`** — Automation cron jobs
+- **`{baseDir}/openclaw/validation-patterns.md`** — Delivery validation helpers
+- **`{baseDir}/openclaw/security-checklist.md`** — Pre-launch security audit
 
 ### Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `{baseDir}/scripts/setup.sh` | Automated workspace setup |
-| `{baseDir}/scripts/test-balance.ts` | Check wallet balance |
-| `{baseDir}/scripts/test-purchase.ts` | Test purchase on testnet |
+- **`{baseDir}/scripts/setup.sh`** — Automated workspace setup
+- **`{baseDir}/scripts/test-balance.ts`** — Check wallet balance
+- **`{baseDir}/scripts/test-purchase.ts`** — Test purchase on testnet
 
 ---
 
