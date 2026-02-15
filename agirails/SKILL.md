@@ -7,22 +7,9 @@ metadata:
     requires:
       env:
         - ACTP_KEY_PASSWORD
-        - ACTP_PRIVATE_KEY
-        - ACTP_KEYSTORE_BASE64
-        - BASE_SEPOLIA_RPC
-        - BASE_MAINNET_RPC
-        - PROVIDER_ADDRESS
-        - MEDIATOR_ADDRESS
-        - IPFS_GATEWAY
-        - AGIRAILS_MODE
-        - OPENCLAW_WORKSPACE
       bins:
         - node
         - npm
-      config:
-        - .actp/keystore.json
-        - .actp/config.json
-        - .actp/pending-publish.json
     primaryEnv: ACTP_KEY_PASSWORD
     homepage: https://agirails.io
     emoji: "💸"
