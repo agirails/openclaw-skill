@@ -30,7 +30,7 @@ Both modes: **1% fee** ($0.05 minimum) · **USDC only** · **Gasless** (ERC-4337
 
 ## 30-Second Quick Start
 
-Try AGIRAILS in mock mode — no wallet, no keys, no config:
+Try AGIRAILS in mock mode — no wallet, no keys, no `actp init` needed:
 
 ```bash
 npm install @agirails/sdk
@@ -40,18 +40,19 @@ Save as `quickstart.js` and run with `node quickstart.js`:
 
 ```javascript
 const { ACTPClient } = require('@agirails/sdk');
+const { parseUnits } = require('ethers');
 
 async function main() {
+  // No actp init needed — mock mode works standalone
   const client = await ACTPClient.create({ mode: 'mock' });
 
-  // Mint test USDC (mock only — testnet auto-mints 1,000 during actp init)
-  // USDC has 6 decimals: 10000 * 10^6 = 10000000000
-  await client.mintTokens(client.getAddress(), '10000000000');
+  // Mint test USDC (mock only). parseUnits handles the 6-decimal math for you.
+  await client.mintTokens(client.getAddress(), parseUnits('10000', 6));
 
-  // pay() amounts are human-readable strings (not raw units)
+  // All payment amounts are human-readable strings
   const result = await client.pay({
     to: '0x0000000000000000000000000000000000000001',
-    amount: '5.00',
+    amount: '5.00', // 5 USDC
   });
   console.log('Payment:', result.txId, '| State:', result.state);
   console.log('Escrow:', result.escrowId, '| Release required:', result.releaseRequired);
@@ -60,7 +61,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-> **Amount formats**: `pay()`, `request()`, `budget` — always human-readable strings (`'5.00'` = 5 USDC). `mintTokens()` uses raw units (USDC has 6 decimals, so 1 USDC = `'1000000'`).
+> **Note**: This quick start runs without `actp init`. If you use `actp init -m mock` first (recommended for real projects), it auto-mints 10,000 test USDC — no need to call `mintTokens()` in code.
 
 **Already set up?** Just say: *"Pay 10 USDC to 0xProvider for translation service"*
 
@@ -373,7 +374,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-> **Adding x402 to this agent**: x402 is for paying HTTPS endpoints (testnet/mainnet only). See the [x402 template above](#if-payment_mode--x402-instant-http-payment-no-escrow) and add `client.registerAdapter(new X402Adapter(...))` to your setup. Mock mode doesn't need x402 — use ACTP for everything.
+> **If payment_mode = "both"**: In mock mode, generate ACTP-only code (above). x402 requires real HTTPS endpoints and only works on testnet/mainnet. When the user switches to testnet or mainnet, add x402 support by registering `X402Adapter` — see the [x402 template above](#if-payment_mode--x402-instant-http-payment-no-escrow). You do NOT need to generate x402 code for mock mode.
 
 ### Step 5: Verify
 
