@@ -9,33 +9,39 @@ license: MIT
 requires:
   runtime: [node, npm]
   env:
-    - ACTP_KEY_PASSWORD
+    - ACTP_KEY_PASSWORD (required for testnet/mainnet — decrypts encrypted keystore)
   optionalEnv:
-    - ACTP_PRIVATE_KEY
-    - ACTP_KEYSTORE_BASE64
-    - BASE_SEPOLIA_RPC
-    - BASE_MAINNET_RPC
+    - ACTP_PRIVATE_KEY (testnet only — blocked on mainnet by SDK fail-closed policy)
+    - ACTP_KEYSTORE_BASE64 (for Docker/Railway/serverless — base64-encoded keystore)
+    - BASE_SEPOLIA_RPC (custom testnet RPC — defaults to public Base Sepolia)
+    - BASE_MAINNET_RPC (custom mainnet RPC — defaults to public Base Mainnet)
+    - PROVIDER_ADDRESS (used in example scripts — target provider wallet address)
+    - OPENCLAW_WORKSPACE (used in setup.sh — defaults to ~/.openclaw/workspace)
 install:
   - npm install @agirails/sdk
   - npx actp init -m <network>
 permissions:
   filesystem:
-    - .actp/keystore.json (encrypted wallet, chmod 600, gitignored)
-    - .actp/config.json (SDK configuration)
-    - .actp/pending-publish.json (lazy publish state)
+    - .actp/keystore.json (encrypted wallet, AES-128-CTR, chmod 600, gitignored)
+    - .actp/config.json (SDK configuration — mode, network, addresses)
+    - .actp/pending-publish.json (lazy publish state for deferred mainnet registration)
   network:
-    - Base Sepolia RPC (testnet)
-    - Base Mainnet RPC (mainnet)
-    - Coinbase CDP Paymaster/Bundler
+    - Base Sepolia RPC (testnet transactions)
+    - Base Mainnet RPC (mainnet transactions)
+    - Coinbase CDP Paymaster/Bundler (gas sponsorship)
+    - npm registry (package install)
   credentials:
-    - ACTP_KEY_PASSWORD (required for testnet/mainnet — decrypts keystore)
-    - ACTP_PRIVATE_KEY (optional, testnet only — blocked on mainnet)
-    - ACTP_KEYSTORE_BASE64 (optional, for containerized deployments)
+    - ACTP_KEY_PASSWORD (required — decrypts keystore for signing transactions)
+    - ACTP_PRIVATE_KEY (optional, testnet only — SDK hard-fails on mainnet, warns on testnet)
+    - ACTP_KEYSTORE_BASE64 (optional — base64-encoded keystore for containerized deployments)
   scope: |
-    This skill instructs agents to install npm/pip packages, create encrypted keystores,
-    read/write .actp/ config directory, and submit on-chain transactions (USDC transfers,
-    escrow operations) via Base L2 RPC endpoints. All transactions are gasless via Paymaster.
-    No admin or root access required.
+    This skill instructs agents to: (1) install @agirails/sdk from npm or agirails from pip,
+    (2) create an encrypted keystore under .actp/ (AES-128-CTR, chmod 600, gitignored),
+    (3) read/write .actp/ config directory for SDK state,
+    (4) submit on-chain USDC transactions (escrow lock/release, instant payments) via Base L2 RPC.
+    All transactions are gasless via Coinbase Paymaster. Raw private keys (ACTP_PRIVATE_KEY)
+    are blocked on mainnet by the SDK's fail-closed policy — only encrypted keystores are accepted.
+    No admin, root, or system-wide access required. No other skills or settings are modified.
 ---
 
 > **How to activate**: Tell your agent: *"Read SKILL.md and set up AGIRAILS payments for my agent"*
