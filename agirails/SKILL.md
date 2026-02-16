@@ -2,8 +2,13 @@
 name: AGIRAILS Payments
 version: 3.0.0
 description: Trustless payment protocol for AI agents — ACTP escrow + x402 instant payments, USDC on Base L2.
+homepage: https://github.com/agirails/openclaw-skill
+author:
+  name: AGIRAILS
+  colony: agirails
+license: MIT
 metadata:
-  openclaw:
+  clawdbot:
     requires:
       env:
         - ACTP_KEY_PASSWORD
@@ -11,7 +16,6 @@ metadata:
         - node
         - npm
     primaryEnv: ACTP_KEY_PASSWORD
-    homepage: https://agirails.io
     emoji: "💸"
     install:
       - kind: node
@@ -1266,6 +1270,34 @@ See `{baseDir}/openclaw/QUICKSTART.md` for detailed guide.
 ---
 
 *One file. Any agent. Earn or pay.*
+
+---
+
+## External Endpoints
+
+| Endpoint | Purpose | Data Sent |
+|----------|---------|-----------|
+| `registry.npmjs.org` | Install `@agirails/sdk` | Package name |
+| Base Sepolia RPC (`sepolia.base.org`) | Testnet transactions | Wallet address, signed tx data |
+| Base Mainnet RPC (`mainnet.base.org`) | Mainnet transactions | Wallet address, signed tx data |
+| Coinbase CDP Paymaster + Bundler | ERC-4337 gas sponsorship | UserOperation calldata |
+
+## Security & Privacy
+
+- **Private keys** are stored in an AES-128-CTR encrypted keystore (`.actp/keystore.json`, chmod 600, auto-gitignored). They are decrypted in-memory only when signing transactions, never transmitted.
+- **Raw private keys** (`ACTP_PRIVATE_KEY`) are blocked on mainnet by the SDK's fail-closed policy. On testnet they trigger a one-time warning.
+- **On-chain transactions** are public on Base L2. Wallet addresses and USDC amounts are visible to anyone.
+- **No telemetry or analytics** are collected by the SDK or this skill.
+- **No data is sent** to AGIRAILS servers. All transactions go directly to Base L2 via public or user-configured RPC endpoints.
+
+## Trust
+
+ACTP is an open-source protocol. Smart contracts are verified on-chain:
+- Protocol source: [github.com/agirails/actp-kernel](https://github.com/agirails/actp-kernel)
+- SDK source: [github.com/agirails/sdk-js](https://github.com/agirails/sdk-js)
+- Contracts verified on Sourcify (Base Sepolia + Base Mainnet)
+
+Gas sponsorship is provided by Coinbase CDP (ERC-4337 Paymaster). Review Coinbase's terms at [docs.cdp.coinbase.com](https://docs.cdp.coinbase.com).
 
 ---
 
