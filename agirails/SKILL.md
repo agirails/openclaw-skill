@@ -527,6 +527,11 @@ export ACTP_KEYSTORE_BASE64="$(base64 < .actp/keystore.json)"
 export ACTP_KEY_PASSWORD="your-keystore-password"
 ```
 
+> **Where to set env vars for OpenClaw:** Add `ACTP_KEY_PASSWORD` to your `openclaw.json` under `env.vars`, not `.bashrc`. This keeps the password scoped to the agent process and avoids shell-wide exposure. Example:
+> ```json
+> { "env": { "vars": { "ACTP_KEY_PASSWORD": "your-keystore-password" } } }
+> ```
+
 > **Note:** SDK includes default RPC endpoints. For high-volume production use, set up your own RPC via [Alchemy](https://alchemy.com) or [QuickNode](https://quicknode.com) and pass `rpcUrl` to client config.
 
 ### Private Key Policy
@@ -1000,6 +1005,29 @@ This enables:
 - **Drift detection**: SDK checks config hash on startup (non-blocking warning if mismatch)
 - **Recovery**: restore your config from on-chain if local file is lost
 
+**AGIRAILS.md format** — must start with YAML frontmatter (`---`):
+
+```yaml
+---
+name: my-agent
+version: 1.0.0
+services:
+  - type: code-review
+    price: 5.00
+    currency: USDC
+  - type: bug-fixing
+    price: 10.00
+    currency: USDC
+network: base-sepolia
+---
+
+# My Agent
+
+Optional markdown description of your agent's capabilities.
+```
+
+Required fields: `name`, `services` (with `type`, `price`, `currency`). Optional: `version`, `network`, `description`.
+
 ---
 
 ## Deployment Security
@@ -1030,7 +1058,8 @@ actp deploy:env
 
 The `serviceTypes` taxonomy in the YAML frontmatter is a **suggested naming convention**, not a discovery mechanism.
 
-- `provide('code-review')` only matches `request('code-review')` — exact string match
+- `provide('code-review')` only matches `request('code-review')` — **exact string match, case-sensitive**
+- Typos like `content-writting` instead of `content-writing` will silently fail to match — double-check spelling
 - There is no global registry, search, or automatic matching between agents
 - Requesters must know the provider's address and service name
 - **ServiceDirectory is in-memory, per-process.** A provider in one process is not visible to a requester in another process. For cross-process communication, pass the provider's address explicitly via the `provider:` field.
