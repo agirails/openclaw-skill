@@ -10,8 +10,7 @@ license: MIT
 metadata:
   clawdbot:
     requires:
-      env:
-        - ACTP_KEY_PASSWORD
+      env: []
       bins:
         - node
         - npm
@@ -1452,8 +1451,9 @@ requiredBinaries:
   - node (>=18)
   - npm
 requiredEnvVars:
-  - ACTP_KEY_PASSWORD (decrypts encrypted keystore — required for testnet and mainnet)
+  - none for mock mode
 optionalEnvVars:
+  - ACTP_KEY_PASSWORD (required only when decrypting .actp/keystore.json or ACTP_KEYSTORE_BASE64 for testnet/mainnet)
   - ACTP_PRIVATE_KEY (raw private key — testnet only, blocked on mainnet by SDK fail-closed policy)
   - ACTP_KEYSTORE_BASE64 (base64-encoded keystore — for Docker/Railway/serverless deployments)
   - BASE_SEPOLIA_RPC (custom testnet RPC endpoint — defaults to public Base Sepolia)
@@ -1468,7 +1468,7 @@ install:
   - pip install agirails (Python alternative)
   - npx actp init -m <network> (creates keystore and config)
 credentials:
-  - ACTP_KEY_PASSWORD (required — decrypts AES-128-CTR encrypted keystore for transaction signing)
+  - ACTP_KEY_PASSWORD (conditional — required only with encrypted keystore/.actp/keystore.json or ACTP_KEYSTORE_BASE64; not needed in mock mode)
   - ACTP_PRIVATE_KEY (optional, testnet only — SDK hard-fails on mainnet, warns once on testnet)
   - ACTP_KEYSTORE_BASE64 (optional — base64-encoded keystore for containerized/serverless deployments)
 filesystemWrites:
