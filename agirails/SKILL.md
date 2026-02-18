@@ -14,7 +14,6 @@ metadata:
       bins:
         - node
         - npm
-    primaryEnv: ACTP_KEY_PASSWORD
     emoji: "💸"
     install:
       - kind: node
