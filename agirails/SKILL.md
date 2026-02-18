@@ -297,6 +297,17 @@ main().catch(console.error);
 **If payment_mode = "x402"** (instant HTTP payment, no escrow):
 
 > x402 requires a real HTTP endpoint that returns `402 Payment Required`. It works on **testnet and mainnet** — in mock mode, use ACTP for everything.
+> 
+> **Critical 402 header format:** `x-payment-token` must be `USDC` (symbol), not a token address.
+> 
+> ```http
+> x-payment-required: true
+> x-payment-address: 0xYourProviderAddress
+> x-payment-amount: 1000000
+> x-payment-network: base-sepolia
+> x-payment-token: USDC
+> x-payment-deadline: 1708...
+> ```
 
 ```typescript
 import { ACTPClient, X402Adapter } from '@agirails/sdk';
