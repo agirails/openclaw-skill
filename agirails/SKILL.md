@@ -298,48 +298,25 @@ main().catch(console.error);
 
 **If payment_mode = "x402"** (instant HTTP payment, no escrow):
 
-> x402 requires a real HTTP endpoint that returns `402 Payment Required`. It works on **testnet and mainnet** — in mock mode, use ACTP for everything.
-> 
-> **Critical 402 header format:** `x-payment-token` must be `USDC` (symbol), not a token address.
-> 
-> ```http
-> x-payment-required: true
-> x-payment-address: 0xYourProviderAddress
-> x-payment-amount: 1000000
-> x-payment-network: base-sepolia
-> x-payment-token: USDC
-> x-payment-deadline: 1708...
-> ```
+> x402 requires a real HTTP endpoint that returns `402 Payment Required` with the standard x402 v2 wire format. It works on **testnet and mainnet** — in mock mode, use ACTP for everything.
+> X402Adapter is **auto-registered** by `ACTPClient.create()` when a wallet provider is present (`@agirails/sdk@3.3.0+`). No manual registration needed.
 
 ```typescript
-import { ACTPClient, X402Adapter } from '@agirails/sdk';
-import { ethers } from 'ethers';
+import { ACTPClient } from '@agirails/sdk';
 
 async function main() {
   const client = await ACTPClient.create({
     mode: '{{network}}',  // 'testnet' or 'mainnet' (x402 needs real endpoints)
   });
 
-  // Register x402 adapter (not registered by default)
-  // The SDK provides the signer from your keystore — get it from the wallet provider
-  const signer = client.getSigner(); // ethers.Wallet from your keystore
-  const usdcAddress = client.getUSDCAddress(); // SDK knows the correct address per network
-
-  client.registerAdapter(new X402Adapter(client.getAddress(), {
-    expectedNetwork: 'base-sepolia', // or 'base-mainnet'
-    transferFn: async (to, amount) => {
-      const usdc = new ethers.Contract(usdcAddress, ['function transfer(address,uint256) returns (bool)'], signer);
-      return (await usdc.transfer(to, amount)).hash;
-    },
-  }));
-
-  const result = await client.basic.pay({
+  // X402Adapter is auto-registered — just pay any HTTPS URL
+  const result = await client.pay({
     to: 'https://api.provider.com/service',  // HTTPS endpoint that returns 402
-    amount: '{{budget}}',
+    metadata: { paymentMethod: 'x402' },     // explicit opt-in for safety
   });
 
-  console.log(result.response?.status); // 200
-  console.log(result.feeBreakdown);     // { grossAmount, providerNet, platformFee, feeBps }
+  console.log(result.success);    // true
+  console.log(result.txId);       // on-chain settlement tx hash
   // No release() needed — x402 is atomic (instant settlement)
 }
 
@@ -434,7 +411,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-> **If payment_mode = "both"**: In mock mode, generate ACTP-only code (above). x402 requires real HTTPS endpoints and only works on testnet/mainnet. When the user switches to testnet or mainnet, add x402 support by registering `X402Adapter` — see the [x402 template above](#if-payment_mode--x402-instant-http-payment-no-escrow). You do NOT need to generate x402 code for mock mode.
+> **If payment_mode = "both"**: In mock mode, generate ACTP-only code (above). x402 requires real HTTPS endpoints and only works on testnet/mainnet. On testnet/mainnet, X402Adapter is auto-registered — just use `client.pay({ to: 'https://...', metadata: { paymentMethod: 'x402' } })`. You do NOT need to generate x402 code for mock mode.
 
 ### Step 5: Verify
 
@@ -507,7 +484,7 @@ const { result } = await request('code-review', {
 
 **There is no provider discovery.** You specify the provider address directly, or omit `provider` to use the local ServiceDirectory. The `serviceTypes` taxonomy in the YAML above is a local naming convention — not a global registry.
 
-**For instant API payments (x402):** Register `X402Adapter` via `client.registerAdapter()`, then use `client.basic.pay({ to: 'https://...' })`. x402 is NOT registered by default — see Step 4 for the full setup.
+**For instant API payments (x402):** X402Adapter is auto-registered on testnet/mainnet. Use `client.pay({ to: 'https://...', metadata: { paymentMethod: 'x402' } })`. See Step 4 for the full flow.
 
 **Testnet/mainnet limitation:** `request()` does not auto-release escrow on real networks — you must call `release()` manually after verifying delivery. Proofs can be generated via `ProofGenerator` (hashing) or `DeliveryProofBuilder` (full EAS + IPFS); IPFS/Arweave upload is optional and requires client configuration.
 
@@ -747,28 +724,20 @@ console.log(`State: ${result.state}`);
 For simple API calls with no deliverables or disputes, use x402 — atomic, one-step:
 
 ```typescript
-import { ACTPClient, X402Adapter } from '@agirails/sdk';
+import { ACTPClient } from '@agirails/sdk';
 
 const client = await ACTPClient.create({
   mode: 'mainnet',
 });
 
-// Register x402 adapter (not registered by default)
-client.registerAdapter(new X402Adapter(client.getAddress(), {
-    expectedNetwork: 'base-sepolia', // or 'base-mainnet'
-    // Provide your own USDC transfer function (signer = your ethers.Wallet)
-    transferFn: async (to, amount) => {
-      const usdc = new ethers.Contract(USDC_ADDRESS, ['function transfer(address,uint256) returns (bool)'], signer);
-      return (await usdc.transfer(to, amount)).hash;
-    },
-  }));
-
-const result = await client.basic.pay({
-  to: 'https://api.provider.com/service',  // HTTPS endpoint that returns 402
-  amount: '5.00',
+// X402Adapter is auto-registered — just pay any HTTPS URL
+const result = await client.pay({
+  to: 'https://api.provider.com/service',
+  metadata: { paymentMethod: 'x402' },
 });
 
-console.log(result.response?.status); // 200
+console.log(result.success);  // true
+console.log(result.txId);     // settlement tx hash
 // No release() needed — x402 is atomic (instant settlement)
 ```
 
@@ -935,36 +904,30 @@ await reporter.reportSettlement({
 
 ## Adapter Routing
 
-The SDK uses an adapter router. By default, only ACTP adapters (basic + standard) are registered. Other adapters require explicit registration:
+The SDK uses an adapter router. ACTP and x402 adapters are auto-registered on testnet/mainnet:
 
-- `0x1234...` (Ethereum address) → **ACTP** (basic/standard) — registered by default
-- `https://api.example.com/...` → **x402** — must register `X402Adapter` via `client.registerAdapter()`
+- `0x1234...` (Ethereum address) → **ACTP** (basic/standard) — auto-registered
+- `https://api.example.com/...` → **x402** — auto-registered when wallet provider present (`@agirails/sdk@3.3.0+`)
 - `agent-name` or agent ID → **ERC-8004** — must configure ERC-8004 bridge
 
 ```typescript
-// ACTP — works out of the box (default adapters)
-await client.basic.pay({ to: '0xProviderAddress', amount: '5' });
+// ACTP — works out of the box
+await client.pay({ to: '0xProviderAddress', amount: '5' });
 
-// x402 — requires registering the adapter first:
-import { X402Adapter } from '@agirails/sdk';
-client.registerAdapter(new X402Adapter(client.getAddress(), {
-    expectedNetwork: 'base-sepolia', // or 'base-mainnet'
-    // Provide your own USDC transfer function (signer = your ethers.Wallet)
-    transferFn: async (to, amount) => {
-      const usdc = new ethers.Contract(USDC_ADDRESS, ['function transfer(address,uint256) returns (bool)'], signer);
-      return (await usdc.transfer(to, amount)).hash;
-    },
-  }));
-await client.basic.pay({ to: 'https://api.provider.com/service', amount: '1' });
+// x402 — auto-registered, just opt in:
+await client.pay({
+  to: 'https://api.provider.com/service',
+  metadata: { paymentMethod: 'x402' },
+});
 
 // ERC-8004 — requires bridge configuration:
 import { ERC8004Bridge } from '@agirails/sdk';
 const bridge = new ERC8004Bridge({ network: 'base-sepolia' });
 const agent = await bridge.resolveAgent('12345');
-await client.basic.pay({ to: agent.wallet, amount: '5', erc8004AgentId: '12345' });
+await client.pay({ to: agent.wallet, amount: '5', erc8004AgentId: '12345' });
 ```
 
-Only ACTP address routing works out of the box. x402 and ERC-8004 require explicit setup.
+ACTP and x402 work out of the box. ERC-8004 requires explicit bridge setup.
 
 You can also force a specific adapter via metadata:
 
@@ -978,25 +941,21 @@ await client.basic.pay({
 
 ---
 
-## x402 Fee Splitting
+## Fee Model
 
-Both ACTP (escrow) and x402 (instant) payments carry the same 1% platform fee ($0.05 minimum).
+**ACTP (escrow)** payments carry a 1% platform fee ($0.05 minimum), split on-chain via EscrowVault.
 
-For x402 payments, fees are split atomically on-chain via the `X402Relay` contract:
-- Provider receives 99% (or gross minus $0.05 minimum)
-- Treasury receives 1% fee
-- Single transaction — no partial failure risk
+**x402 (instant)** payments have **zero AGIRAILS fee** — `payTo` goes directly to the seller. The facilitator (Coinbase public by default) handles on-chain settlement. X402Relay contract is deprecated as of `@agirails/sdk@3.3.0`.
 
 ```typescript
-// Fee breakdown is included in the result
-const result = await client.basic.pay({
+// x402 — zero fee, atomic settlement
+const result = await client.pay({
   to: 'https://api.provider.com/service',
-  amount: '100.00',
+  metadata: { paymentMethod: 'x402' },
 });
 
-console.log(result.feeBreakdown);
-// { grossAmount: '100000000', providerNet: '99000000',
-//   platformFee: '1000000', feeBps: 100, estimated: true }
+console.log(result.txId);       // on-chain settlement tx hash
+console.log(result.provider);   // seller address (100% of payment)
 ```
 
 > The `estimated: true` flag means the breakdown was calculated client-side. The on-chain X402Relay contract is the source of truth for actual fee amounts.

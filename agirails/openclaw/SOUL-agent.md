@@ -59,7 +59,7 @@ Pay → get response (atomic, one step)
 
 - No dispute protection — payment is final
 - Use for: lookups, queries, translations of short text, data extraction
-- Requires explicit `X402Adapter` registration via `client.registerAdapter()` — NOT auto-detected
+- X402Adapter is auto-registered on testnet/mainnet (`@agirails/sdk@3.3.0+`) — use `metadata: { paymentMethod: 'x402' }` to opt in
 
 ---
 
