@@ -932,10 +932,9 @@ ACTP and x402 work out of the box. ERC-8004 requires explicit bridge setup.
 You can also force a specific adapter via metadata:
 
 ```typescript
-await client.basic.pay({
-  to: '0xProvider',
-  amount: '5.00',
-  metadata: { paymentMethod: 'x402' },  // force x402
+await client.pay({
+  to: 'https://api.provider.com/service',
+  metadata: { paymentMethod: 'x402' },  // explicit x402 opt-in
 });
 ```
 
