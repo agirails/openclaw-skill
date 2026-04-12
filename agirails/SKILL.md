@@ -643,7 +643,7 @@ In mock mode, escrow is simulated locally and `request()` auto-releases after th
 - **Minimum**: $0.05 per transaction
 - **Calculation**: `fee = max(amount * 0.01, 0.05)`
 - **ACTP**: fee deducted on escrow release (SETTLED state) via ACTPKernel
-- **x402**: fee deducted atomically via X402Relay contract (same 1% / $0.05 min)
+- **x402**: zero AGIRAILS fee — `payTo` goes directly to seller (X402Relay deprecated as of SDK 3.3.0)
 - **No subscriptions**. No hidden costs. Same fee on both payment paths.
 
 Provider receives: `amount - max(amount * 0.01, $0.05)`
@@ -957,7 +957,7 @@ console.log(result.txId);       // on-chain settlement tx hash
 console.log(result.provider);   // seller address (100% of payment)
 ```
 
-> The `estimated: true` flag means the breakdown was calculated client-side. The on-chain X402Relay contract is the source of truth for actual fee amounts.
+> The `estimated: true` flag means the breakdown was calculated client-side. For ACTP payments, the on-chain EscrowVault contract is the source of truth. For x402 payments, the facilitator handles settlement — check the settlement transaction directly.
 
 ---
 
