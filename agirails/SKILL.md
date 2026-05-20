@@ -1,6 +1,6 @@
 ---
 name: AGIRAILS Payments
-version: 3.0.0
+version: 4.0.0
 description: Trustless payment protocol for AI agents — ACTP escrow + x402 instant payments, USDC on Base L2.
 homepage: https://github.com/agirails/openclaw-skill
 author:
@@ -28,6 +28,16 @@ metadata:
 > **Credential policy:** mock mode needs no secrets. Testnet/mainnet require wallet credentials.
 
 # AGIRAILS — Trustless Payments for AI Agents
+
+> ### What's new in v4.0.0 (2026-05-19)
+>
+> - **Base mainnet redeployed** with fresh addresses for all 4 core contracts (ACTPKernel, EscrowVault, AgentRegistry, ArchiveTreasury). SDK `@agirails/sdk@4.0.0` reads them via `getNetwork('base-mainnet')` — consumer code that goes through the helper auto-picks them up.
+> - **AIP-14 dispute bonds** — disputes require $1 USDC bond from the disputer, returned per fault attribution.
+> - **MIN_FEE on-chain** — $0.05 minimum enforced in the kernel itself (no more SDK-only check).
+> - **INV-30 storage hardening** — per-transaction `disputeBondBpsLocked`. Live admin rate updates can't affect in-flight tx bonds.
+> - **All 8 contracts Sourcify EXACT_MATCH verified** on both Sepolia + mainnet.
+> - **X402Relay removed from mainnet config** — x402 v2 routes direct buyer→seller via `@x402/fetch` + facilitator (zero AGIRAILS fee). Sepolia X402Relay retained for legacy direct-call consumers only.
+> - **Workflow-attested npm publish** from 4.0.0 onwards — every release ships with sigstore + SLSA provenance attestations.
 
 The open payment protocol for AI agents. Two payment modes, one SDK, settled in USDC on Base L2.
 
@@ -299,7 +309,7 @@ main().catch(console.error);
 **If payment_mode = "x402"** (instant HTTP payment, no escrow):
 
 > x402 requires a real HTTP endpoint that returns `402 Payment Required` with the standard x402 v2 wire format. It works on **testnet and mainnet** — in mock mode, use ACTP for everything.
-> X402Adapter is **auto-registered** by `ACTPClient.create()` when a wallet provider is present (`@agirails/sdk@3.3.0+`). No manual registration needed.
+> X402Adapter is **auto-registered** by `ACTPClient.create()` when a wallet provider is present (`@agirails/sdk@4.0.0+`). No manual registration needed.
 
 ```typescript
 import { ACTPClient } from '@agirails/sdk';
@@ -907,7 +917,7 @@ await reporter.reportSettlement({
 The SDK uses an adapter router. ACTP and x402 adapters are auto-registered on testnet/mainnet:
 
 - `0x1234...` (Ethereum address) → **ACTP** (basic/standard) — auto-registered
-- `https://api.example.com/...` → **x402** — auto-registered when wallet provider present (`@agirails/sdk@3.3.0+`)
+- `https://api.example.com/...` → **x402** — auto-registered when wallet provider present (`@agirails/sdk@4.0.0+`)
 - `agent-name` or agent ID → **ERC-8004** — must configure ERC-8004 bridge
 
 ```typescript
